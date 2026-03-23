@@ -44,15 +44,22 @@ class ExportService {
     return converter.convert([header, ...rows]);
   }
 
-  /// Saves CSV data to a temp file and shares it via the system share sheet.
+  /// Saves CSV data to the app-private directory, shares it, then deletes it.
   Future<void> saveAndShareCSV(String csvData, String filename) async {
-    final dir = await getTemporaryDirectory();
+    final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$filename');
     await file.writeAsString(csvData);
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: filename,
-    );
+    try {
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: filename,
+      );
+    } finally {
+      // Always clean up PII-containing file after sharing completes
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
   }
 }

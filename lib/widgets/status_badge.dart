@@ -21,6 +21,8 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (status.isEmpty) return const SizedBox.shrink();
+
     final color = AppColors.statusColor(status);
     final isSmall = size == StatusBadgeSize.small;
     final fontSize = isSmall ? 10.0 : 12.0;

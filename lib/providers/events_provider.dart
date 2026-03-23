@@ -32,33 +32,55 @@ class EventsNotifier extends AsyncNotifier<List<Event>> {
   }
 
   Future<void> createEvent(Event event) async {
-    final repo = ref.read(eventsRepositoryProvider);
-    final created = await repo.createEvent(event);
-    final current = state.valueOrNull ?? [];
-    state = AsyncData([created, ...current]);
+    final previous = state;
+    // Optimistic update
+    state = AsyncData([event, ...state.valueOrNull ?? []]);
+    try {
+      final repo = ref.read(eventsRepositoryProvider);
+      final created = await repo.createEvent(event);
+      // Replace optimistic with server response
+      state = AsyncData([created, ...previous.valueOrNull ?? []]);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 
   Future<void> updateEvent(Event event) async {
-    final repo = ref.read(eventsRepositoryProvider);
-    await repo.updateEvent(event);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData([
       for (final e in current)
         if (e.id == event.id) event else e,
     ]);
+    try {
+      final repo = ref.read(eventsRepositoryProvider);
+      await repo.updateEvent(event);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 
   Future<void> deleteEvent(String id) async {
-    final repo = ref.read(eventsRepositoryProvider);
-    await repo.deleteEvent(id);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData(current.where((e) => e.id != id).toList());
+    try {
+      final repo = ref.read(eventsRepositoryProvider);
+      await repo.deleteEvent(id);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 
   Future<void> setActiveEvent(String id) async {
-    final repo = ref.read(eventsRepositoryProvider);
-    await repo.setActiveEvent(id);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData([
       for (final e in current)
         if (e.id == id)
@@ -66,6 +88,13 @@ class EventsNotifier extends AsyncNotifier<List<Event>> {
         else
           e.copyWith(isActive: false),
     ]);
+    try {
+      final repo = ref.read(eventsRepositoryProvider);
+      await repo.setActiveEvent(id);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 }
 

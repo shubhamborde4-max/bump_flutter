@@ -58,7 +58,11 @@ class SupabaseProfileRepository implements ProfileRepository {
 
   @override
   Future<String> uploadAvatar(String filePath) async {
-    final userId = _client.auth.currentUser!.id;
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw AuthException('Session expired. Please sign in again.');
+    }
+    final userId = user.id;
     final fileExt = filePath.split('.').last;
     final fileName = '$userId/avatar.$fileExt';
 

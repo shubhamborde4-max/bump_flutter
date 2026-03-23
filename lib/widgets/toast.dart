@@ -23,11 +23,18 @@ class BumpToast extends StatefulWidget {
 
   /// Shows a toast notification at the top of the screen.
   /// Auto-dismisses after 2 seconds with a fade animation.
+  /// Dismisses any previously visible toast before showing the new one.
+  static OverlayEntry? _currentEntry;
+
   static void show(
     BuildContext context,
     String message, {
     ToastType type = ToastType.info,
   }) {
+    // Dismiss previous toast if still visible
+    _currentEntry?.remove();
+    _currentEntry = null;
+
     final overlay = Overlay.of(context);
     late final OverlayEntry entry;
 
@@ -35,10 +42,14 @@ class BumpToast extends StatefulWidget {
       builder: (context) => _ToastOverlay(
         message: message,
         type: type,
-        onDismiss: () => entry.remove(),
+        onDismiss: () {
+          entry.remove();
+          if (_currentEntry == entry) _currentEntry = null;
+        },
       ),
     );
 
+    _currentEntry = entry;
     overlay.insert(entry);
   }
 

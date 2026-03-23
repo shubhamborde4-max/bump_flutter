@@ -33,9 +33,9 @@ class ProspectsNotifier extends AsyncNotifier<List<Prospect>> {
   }
 
   Future<void> updateProspectStatus(String id, String status) async {
-    final repo = ref.read(prospectsRepositoryProvider);
-    await repo.updateProspectStatus(id, status);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData([
       for (final p in current)
         if (p.id == id)
@@ -43,23 +43,44 @@ class ProspectsNotifier extends AsyncNotifier<List<Prospect>> {
         else
           p,
     ]);
+    try {
+      final repo = ref.read(prospectsRepositoryProvider);
+      await repo.updateProspectStatus(id, status);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 
   Future<void> updateProspect(Prospect prospect) async {
-    final repo = ref.read(prospectsRepositoryProvider);
-    await repo.updateProspect(prospect);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData([
       for (final p in current)
         if (p.id == prospect.id) prospect else p,
     ]);
+    try {
+      final repo = ref.read(prospectsRepositoryProvider);
+      await repo.updateProspect(prospect);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 
   Future<void> deleteProspect(String id) async {
-    final repo = ref.read(prospectsRepositoryProvider);
-    await repo.deleteProspect(id);
+    final previous = state;
     final current = state.valueOrNull ?? [];
+    // Optimistic update
     state = AsyncData(current.where((p) => p.id != id).toList());
+    try {
+      final repo = ref.read(prospectsRepositoryProvider);
+      await repo.deleteProspect(id);
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 }
 

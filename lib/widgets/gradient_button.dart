@@ -22,7 +22,7 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = small ? 36.0 : 56.0;
+    final height = small ? 44.0 : 56.0;
     final fontSize = small ? 14.0 : 16.0;
 
     return AnimatedPressable(

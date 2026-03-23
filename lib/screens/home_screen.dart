@@ -15,6 +15,7 @@ import 'package:bump/providers/app_state.dart';
 import 'package:bump/data/models/event_model.dart';
 import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/data/models/user_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -214,7 +215,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: InkWell(
                                     borderRadius:
                                         BorderRadius.circular(20),
-                                    onTap: () {},
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Coming soon!'),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          duration: const Duration(seconds: 1),
+                                        ),
+                                      );
+                                    },
                                     child: const Center(
                                       child: Icon(
                                         LucideIcons.bell,
@@ -293,7 +303,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         const SizedBox(height: 24),
         // Share Card button
         GestureDetector(
-          onTap: () {},
+          onTap: () {
+            final user = ref.read(profileNotifierProvider).valueOrNull;
+            if (user != null) {
+              SharePlus.instance.share(
+                ShareParams(text: 'Connect with ${user.fullName} on Bump!\nhttps://bump.app/u/${user.username}'),
+              );
+            }
+          },
           child: Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

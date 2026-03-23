@@ -6,7 +6,13 @@ import 'package:bump/data/repositories/event_repository.dart';
 class SupabaseEventRepository implements EventRepository {
   SupabaseClient get _client => Supabase.instance.client;
 
-  String get _userId => _client.auth.currentUser!.id;
+  String get _userId {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw AuthException('Session expired. Please sign in again.');
+    }
+    return user.id;
+  }
 
   @override
   Future<List<Event>> getEvents() async {
@@ -65,17 +71,10 @@ class SupabaseEventRepository implements EventRepository {
 
   @override
   Future<void> setActiveEvent(String id) async {
-    // First deactivate all events for this user
-    await _client
-        .from('events')
-        .update({'is_active': false})
-        .eq('user_id', _userId);
-
-    // Then activate the target event
-    await _client
-        .from('events')
-        .update({'is_active': true})
-        .eq('id', id)
-        .eq('user_id', _userId);
+    // Atomic: deactivate all then activate target in a single RPC call
+    await _client.rpc('activate_event', params: {
+      'p_user_id': _userId,
+      'p_event_id': id,
+    });
   }
 }

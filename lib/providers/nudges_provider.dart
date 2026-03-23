@@ -32,10 +32,18 @@ class NudgesNotifier extends AsyncNotifier<List<Nudge>> {
   }
 
   Future<Nudge> sendNudge(Nudge nudge) async {
-    final repo = ref.read(nudgesRepositoryProvider);
-    final created = await repo.createNudge(nudge);
-    final current = state.valueOrNull ?? [];
-    state = AsyncData([created, ...current]);
-    return created;
+    final previous = state;
+    // Optimistic update
+    state = AsyncData([nudge, ...state.valueOrNull ?? []]);
+    try {
+      final repo = ref.read(nudgesRepositoryProvider);
+      final created = await repo.createNudge(nudge);
+      // Replace optimistic with server response
+      state = AsyncData([created, ...previous.valueOrNull ?? []]);
+      return created;
+    } catch (e) {
+      state = previous; // Rollback
+      rethrow;
+    }
   }
 }

@@ -5,7 +5,13 @@ import 'package:bump/data/repositories/device_repository.dart';
 class SupabaseDeviceRepository implements DeviceRepository {
   SupabaseClient get _client => Supabase.instance.client;
 
-  String get _userId => _client.auth.currentUser!.id;
+  String get _userId {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw AuthException('Session expired. Please sign in again.');
+    }
+    return user.id;
+  }
 
   @override
   Future<void> upsertDevice({

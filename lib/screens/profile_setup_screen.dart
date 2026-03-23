@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -119,11 +120,64 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
+  // BUG-020: Normalize URL by prepending https:// if missing
+  String? _normalizeUrl(String url) {
+    if (url.isEmpty) return null;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+    try {
+      final uri = Uri.parse(url);
+      if (uri.host.isEmpty || !uri.host.contains('.')) return null;
+      return url;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _onComplete() async {
     setState(() => _isLoading = true);
 
     try {
       final userId = Supabase.instance.client.auth.currentUser!.id;
+
+      // BUG-020: Validate and normalize LinkedIn URL
+      String? linkedInUrl;
+      if (_linkedInController.text.trim().isNotEmpty) {
+        linkedInUrl = _normalizeUrl(_linkedInController.text.trim());
+        if (linkedInUrl == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please enter a valid LinkedIn URL'),
+              backgroundColor: Colors.red.shade600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
+      // BUG-020: Validate and normalize Website URL
+      String? websiteUrl;
+      if (_websiteController.text.trim().isNotEmpty) {
+        websiteUrl = _normalizeUrl(_websiteController.text.trim());
+        if (websiteUrl == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please enter a valid website URL'),
+              backgroundColor: Colors.red.shade600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
 
       final user = User(
         id: userId,
@@ -136,12 +190,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         phone: _phoneController.text.trim(),
         company: _companyController.text.trim(),
         title: _titleController.text.trim(),
-        linkedIn: _linkedInController.text.trim().isNotEmpty
-            ? _linkedInController.text.trim()
-            : null,
-        website: _websiteController.text.trim().isNotEmpty
-            ? _websiteController.text.trim()
-            : null,
+        linkedIn: linkedInUrl,
+        website: websiteUrl,
         cardStyle: _selectedCardStyle,
       );
 
@@ -377,6 +427,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _usernameController,
+              maxLength: 30,
+              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
               decoration: InputDecoration(
                 hintText: 'johndoe',
                 prefixIcon: const Icon(Icons.alternate_email,
@@ -435,12 +488,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           controller: _firstNameController,
           label: 'First Name',
           hint: 'John',
+          maxLength: 100,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           controller: _lastNameController,
           label: 'Last Name',
           hint: 'Doe',
+          maxLength: 100,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -448,6 +503,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'Email',
           hint: 'john@example.com',
           keyboardType: TextInputType.emailAddress,
+          maxLength: 255,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -455,6 +511,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'Phone',
           hint: '+1 (555) 000-0000',
           keyboardType: TextInputType.phone,
+          maxLength: 20,
         ),
       ],
     );
@@ -486,12 +543,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           controller: _companyController,
           label: 'Company',
           hint: 'Acme Inc.',
+          maxLength: 200,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           controller: _titleController,
           label: 'Job Title',
           hint: 'Product Manager',
+          maxLength: 200,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -499,6 +558,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'LinkedIn',
           hint: 'linkedin.com/in/johndoe',
           keyboardType: TextInputType.url,
+          maxLength: 255,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -506,6 +566,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'Website',
           hint: 'johndoe.com',
           keyboardType: TextInputType.url,
+          maxLength: 255,
         ),
       ],
     );
@@ -666,6 +727,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     required String label,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,6 +744,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          maxLength: maxLength,
+          maxLengthEnforcement: maxLength != null ? MaxLengthEnforcement.enforced : null,
+          buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,

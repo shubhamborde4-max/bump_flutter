@@ -110,6 +110,7 @@ class _NudgeSheetContentState extends ConsumerState<_NudgeSheetContent> {
   void initState() {
     super.initState();
     _messageCtrl = TextEditingController();
+    _messageCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -149,8 +150,56 @@ class _NudgeSheetContentState extends ConsumerState<_NudgeSheetContent> {
     }
   }
 
+  // BUG-008: Phone number validation helper
+  bool _isValidPhone(String phone) {
+    final cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(cleaned);
+  }
+
   Future<void> _handleSend() async {
     if (_isSending) return;
+
+    // BUG-007: Validate message is not empty
+    if (_messageCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a message before sending'),
+          backgroundColor: const Color(0xFFBA1A1A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    // BUG-008: Validate phone for WhatsApp/SMS channels
+    if (_selectedChannel == 'whatsapp' || _selectedChannel == 'sms') {
+      if (widget.prospect.phone.isEmpty || !_isValidPhone(widget.prospect.phone)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Invalid or missing phone number for this contact'),
+            backgroundColor: const Color(0xFFBA1A1A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+    }
+
+    // BUG-008: Validate email for email channel
+    if (_selectedChannel == 'email' && widget.prospect.email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No email address for this contact'),
+          backgroundColor: const Color(0xFFBA1A1A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSending = true);
 
     final now = DateTime.now();
@@ -492,11 +541,13 @@ class _NudgeSheetContentState extends ConsumerState<_NudgeSheetContent> {
             ),
             const SizedBox(height: 16),
 
-            // Send Nudge button
+            // Send Nudge button (BUG-007: disabled when message is empty)
             _GradientButton(
               title: _isSending ? 'Sending...' : 'Send Nudge',
               icon: LucideIcons.send,
-              onPressed: _isSending ? null : _handleSend,
+              onPressed: (_isSending || _messageCtrl.text.trim().isEmpty)
+                  ? null
+                  : _handleSend,
             ),
           ],
         ),

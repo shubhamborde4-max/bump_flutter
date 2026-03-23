@@ -172,90 +172,26 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Pulsing bump circle
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer pulse ring 1
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.15),
-                  width: 2,
-                ),
+        // Static NFC icon
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppGradients.hero,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                blurRadius: 20,
+                spreadRadius: 2,
               ),
-            )
-                .animate(
-                  onPlay: (controller) =>
-                      controller.repeat(reverse: true),
-                )
-                .scale(
-                  begin: const Offset(0.9, 0.9),
-                  end: const Offset(1.15, 1.15),
-                  duration: 1500.ms,
-                  curve: Curves.easeInOut,
-                )
-                .fadeIn(duration: 300.ms),
-
-            // Outer pulse ring 2
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.25),
-                  width: 2,
-                ),
-              ),
-            )
-                .animate(
-                  onPlay: (controller) =>
-                      controller.repeat(reverse: true),
-                )
-                .scale(
-                  begin: const Offset(0.95, 0.95),
-                  end: const Offset(1.1, 1.1),
-                  duration: 1200.ms,
-                  delay: 200.ms,
-                  curve: Curves.easeInOut,
-                ),
-
-            // Main circle
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppGradients.hero,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 30,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                LucideIcons.smartphone,
-                size: 48,
-                color: Colors.white,
-              ),
-            )
-                .animate(
-                  onPlay: (controller) =>
-                      controller.repeat(reverse: true),
-                )
-                .scale(
-                  begin: const Offset(0.95, 0.95),
-                  end: const Offset(1.05, 1.05),
-                  duration: 1000.ms,
-                  curve: Curves.easeInOut,
-                ),
-          ],
+            ],
+          ),
+          child: const Icon(
+            LucideIcons.smartphone,
+            size: 48,
+            color: Colors.white,
+          ),
         ),
 
         const SizedBox(height: 32),
@@ -267,9 +203,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
-        )
-            .animate()
-            .fadeIn(delay: 200.ms, duration: 400.ms),
+        ),
 
         const SizedBox(height: 8),
 
@@ -284,9 +218,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               height: 1.5,
             ),
           ),
-        )
-            .animate()
-            .fadeIn(delay: 400.ms, duration: 400.ms),
+        ),
 
         const SizedBox(height: 24),
 
@@ -333,9 +265,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               ),
             ),
           ),
-        )
-            .animate()
-            .fadeIn(delay: 600.ms, duration: 400.ms),
+        ),
 
         const SizedBox(height: 24),
       ],

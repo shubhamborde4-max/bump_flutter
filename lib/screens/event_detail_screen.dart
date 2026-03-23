@@ -629,7 +629,16 @@ class _ProspectCard extends StatelessWidget {
                   icon: LucideIcons.tag,
                   label: 'Tag',
                   color: _primary,
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Coming soon!'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

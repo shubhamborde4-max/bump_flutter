@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,9 +95,17 @@ class ProspectDetailScreen extends ConsumerStatefulWidget {
 class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
   final _notesController = TextEditingController();
   bool _editingNotes = false;
+  Timer? _debounceTimer;
+
+  // BUG-008: Phone number validation helper
+  bool _isValidPhone(String phone) {
+    final cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(cleaned);
+  }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _notesController.dispose();
     super.dispose();
   }
@@ -250,9 +260,18 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                             label: 'Call',
                             onTap: () {
                               final phone = prospect.phone;
-                              if (phone.isNotEmpty) {
-                                launchUrl(Uri.parse('tel:$phone'));
+                              if (phone.isEmpty || !_isValidPhone(phone)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Invalid or missing phone number'),
+                                    backgroundColor: Colors.red.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                                return;
                               }
+                              launchUrl(Uri.parse('tel:$phone'));
                             },
                           ),
                           const SizedBox(width: 24),
@@ -361,16 +380,22 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                 controller: _notesController,
                                 maxLines: null,
                                 minLines: 2,
+                                maxLength: 2000,
+                                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                                 cursorColor: _primary,
                                 onTap: () => setState(
                                     () => _editingNotes = true),
                                 onChanged: (val) {
-                                  ref
-                                      .read(prospectsProvider
-                                          .notifier)
-                                      .updateProspect(
-                                          prospect.copyWith(
-                                              notes: val));
+                                  _debounceTimer?.cancel();
+                                  _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+                                    ref
+                                        .read(prospectsProvider
+                                            .notifier)
+                                        .updateProspect(
+                                            prospect.copyWith(
+                                                notes: val));
+                                  });
                                 },
                                 style: GoogleFonts.inter(
                                   fontSize: 14,

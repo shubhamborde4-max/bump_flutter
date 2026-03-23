@@ -24,6 +24,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _navigateAfterDelay() async {
+    try {
+      await _performNavigation().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          if (mounted) context.go('/auth');
+        },
+      );
+    } catch (_) {
+      if (mounted) context.go('/auth');
+    }
+  }
+
+  Future<void> _performNavigation() async {
     await Future.delayed(const Duration(milliseconds: 2500));
     if (!mounted) return;
 

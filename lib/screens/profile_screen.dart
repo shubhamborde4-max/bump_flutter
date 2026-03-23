@@ -167,32 +167,86 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsRow(
                           icon: LucideIcons.edit3,
                           label: 'Edit Profile',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.wallet,
                           label: 'Card Style',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.bell,
                           label: 'Notifications',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.shield,
                           label: 'Privacy',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.helpCircle,
                           label: 'Help',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.info,
                           label: 'About',
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsRow(
                           icon: LucideIcons.logOut,
