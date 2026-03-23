@@ -1,3 +1,5 @@
+enum EventStatus { upcoming, ongoing, past }
+
 class Event {
   final String id;
   final String? userId;
@@ -22,6 +24,20 @@ class Event {
     this.nudgesSent = 0,
     this.isActive = false,
   });
+
+  /// Event status based on dates.
+  EventStatus get status {
+    final now = DateTime.now();
+    if (endDate != null && now.isAfter(endDate!)) return EventStatus.past;
+    if (now.isAfter(date) && (endDate == null || now.isBefore(endDate!))) {
+      return EventStatus.ongoing;
+    }
+    return EventStatus.upcoming;
+  }
+
+  bool get isOngoing => status == EventStatus.ongoing;
+  bool get isPast => status == EventStatus.past;
+  bool get isUpcoming => status == EventStatus.upcoming;
 
   Event copyWith({
     String? id,

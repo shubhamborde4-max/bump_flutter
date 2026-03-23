@@ -71,7 +71,7 @@ class MainShell extends StatelessWidget {
                       onTap: () => context.go('/home'),
                     ),
                     _NavItem(
-                      icon: LucideIcons.radio,
+                      icon: LucideIcons.zap,
                       label: 'Bump',
                       isActive: index == 1,
                       onTap: () => context.go('/bump'),

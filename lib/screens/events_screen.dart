@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
 import 'package:bump/providers/profile_provider.dart';
@@ -14,6 +15,7 @@ import 'package:bump/providers/prospects_provider.dart';
 import 'package:bump/data/models/event_model.dart';
 import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/screens/nudge_sheet.dart';
+import 'package:bump/widgets/empty_state.dart';
 
 // ── Design Tokens ───────────────────────────────────────────────────────────
 const _primary = Color(0xFF5341CD);
@@ -69,7 +71,20 @@ class EventsScreen extends ConsumerStatefulWidget {
 
 class _EventsScreenState extends ConsumerState<EventsScreen> {
   int _activeTabIndex = 0;
-  final _tabs = ['Prospects', 'History', 'Export'];
+  final _tabs = ['Ongoing', 'Upcoming', 'Past'];
+
+  List<Event> _filterEvents(List<Event> events) {
+    switch (_activeTabIndex) {
+      case 0:
+        return events.where((e) => e.isOngoing).toList();
+      case 1:
+        return events.where((e) => e.isUpcoming).toList();
+      case 2:
+        return events.where((e) => e.isPast).toList();
+      default:
+        return events;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,11 +100,11 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
         error: (error, _) => _buildErrorState(error),
         data: (events) {
           final prospects = prospectsAsync.valueOrNull ?? [];
-          final activeEvent = events.where((e) => e.isActive).isNotEmpty
-              ? events.firstWhere((e) => e.isActive)
-              : events.isNotEmpty
-                  ? events.first
-                  : null;
+          final filteredEvents = _filterEvents(events);
+
+          final activeEvent = filteredEvents.isNotEmpty
+              ? filteredEvents.first
+              : null;
 
           final eventProspects = activeEvent != null
               ? prospects
@@ -179,35 +194,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                             duration: 500.ms),
                       ),
 
-                    if (events.isEmpty)
+                    // Empty state for each tab
+                    if (filteredEvents.isEmpty)
                       SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 60, horizontal: 24),
-                          child: Column(
-                            children: [
-                              const Icon(LucideIcons.calendar,
-                                  size: 48, color: _primary),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No events yet',
-                                style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: _onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Create your first event to start tracking prospects',
-                                style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: _onSurfaceVariant),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
+                        child: _buildEmptyStateForTab(),
                       ),
 
                     const SliverToBoxAdapter(child: SizedBox(height: 40)),
@@ -343,6 +333,38 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildEmptyStateForTab() {
+    switch (_activeTabIndex) {
+      case 0:
+        return EmptyState(
+          icon: LucideIcons.calendar,
+          title: 'No ongoing events',
+          subtitle:
+              'Events happening right now will appear here.\nCreate a new event to get started.',
+          actionLabel: 'Create Event',
+          onAction: () => _showCreateEventSheet(context),
+        );
+      case 1:
+        return EmptyState(
+          icon: LucideIcons.calendarPlus,
+          title: 'No upcoming events scheduled',
+          subtitle:
+              'Your future events will show up here.\nPlan ahead by creating a new event.',
+          actionLabel: 'Create Event',
+          onAction: () => _showCreateEventSheet(context),
+        );
+      case 2:
+        return EmptyState(
+          icon: LucideIcons.calendarCheck,
+          title: 'No past events yet',
+          subtitle:
+              'Your completed events and their prospects\nwill appear here after they end.',
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildLoadingState() {
@@ -603,6 +625,17 @@ class _FeaturedEventCard extends StatelessWidget {
 
   const _FeaturedEventCard({required this.event, required this.prospectCount});
 
+  String get _statusBadgeLabel {
+    switch (event.status) {
+      case EventStatus.ongoing:
+        return 'ACTIVE EVENT';
+      case EventStatus.upcoming:
+        return 'UPCOMING';
+      case EventStatus.past:
+        return 'COMPLETED';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -660,7 +693,7 @@ class _FeaturedEventCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Active Event badge
+                        // Status badge
                         ClipRRect(
                           borderRadius: BorderRadius.circular(100),
                           child: BackdropFilter(
@@ -675,7 +708,7 @@ class _FeaturedEventCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(100),
                               ),
                               child: Text(
-                                'ACTIVE EVENT',
+                                _statusBadgeLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -1033,6 +1066,8 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   final _nameCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(hours: 8));
 
   @override
   void dispose() {
@@ -1042,14 +1077,104 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
     super.dispose();
   }
 
+  Future<void> _pickStartDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: _primary,
+            onPrimary: Colors.white,
+            surface: _surface,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (date != null) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_startDate),
+        builder: (context, child) => Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: _primary,
+              onPrimary: Colors.white,
+              surface: _surface,
+            ),
+          ),
+          child: child!,
+        ),
+      );
+      setState(() {
+        _startDate = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time?.hour ?? _startDate.hour,
+          time?.minute ?? _startDate.minute,
+        );
+        // Ensure end date is after start date
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate.add(const Duration(hours: 8));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _endDate.isBefore(_startDate) ? _startDate : _endDate,
+      firstDate: _startDate,
+      lastDate: DateTime(2030),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: _primary,
+            onPrimary: Colors.white,
+            surface: _surface,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (date != null) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_endDate),
+        builder: (context, child) => Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: _primary,
+              onPrimary: Colors.white,
+              surface: _surface,
+            ),
+          ),
+          child: child!,
+        ),
+      );
+      setState(() {
+        _endDate = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time?.hour ?? _endDate.hour,
+          time?.minute ?? _endDate.minute,
+        );
+      });
+    }
+  }
+
   void _handleCreate() {
-    final now = DateTime.now();
-    final end = now.add(const Duration(hours: 8));
     widget.onSave(Event(
       id: '', // Supabase will generate the id
       name: _nameCtrl.text,
-      date: now,
-      endDate: end,
+      date: _startDate,
+      endDate: _endDate,
       location: _locationCtrl.text.isEmpty ? 'TBD' : _locationCtrl.text,
       description: _descCtrl.text.isNotEmpty ? _descCtrl.text : null,
     ));
@@ -1057,6 +1182,8 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat('MMM d, yyyy \u2022 h:mm a');
+
     return Container(
       decoration: const BoxDecoration(
         color: _surface,
@@ -1068,92 +1195,153 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
         20,
         MediaQuery.of(context).viewInsets.bottom + 40,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: _outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Create Event',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: _onSurface,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Icon(LucideIcons.x,
-                    size: 24, color: _onSurfaceVariant),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Fields
-          _buildField(
-              'EVENT NAME', 'e.g. TechCrunch Disrupt 2026', _nameCtrl),
-          const SizedBox(height: 16),
-          _buildField('LOCATION', 'Venue, City', _locationCtrl),
-          const SizedBox(height: 16),
-          _buildField(
-              'DESCRIPTION', "What's this event about?", _descCtrl,
-              maxLines: 3),
-          const SizedBox(height: 24),
-
-          // Create button
-          GestureDetector(
-            onTap:
-                _nameCtrl.text.trim().isNotEmpty ? _handleCreate : null,
-            child: Container(
-              height: 56,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                gradient: _nameCtrl.text.trim().isNotEmpty
-                    ? const LinearGradient(
-                        colors: [_primary, _primaryContainer],
-                        begin: Alignment.bottomLeft,
-                        end: Alignment.topRight,
-                      )
-                    : null,
-                color: _nameCtrl.text.trim().isEmpty ? _surfaceLow : null,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: _nameCtrl.text.trim().isNotEmpty
-                    ? [
-                        BoxShadow(
-                          color: _primaryContainer
-                              .withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
+                color: _outlineVariant,
+                borderRadius: BorderRadius.circular(2),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                'Create Event',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+            ),
+            const SizedBox(height: 16),
+
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Create Event',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: _onSurface,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(LucideIcons.x,
+                      size: 24, color: _onSurfaceVariant),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Fields
+            _buildField(
+                'EVENT NAME', 'e.g. TechCrunch Disrupt 2026', _nameCtrl),
+            const SizedBox(height: 16),
+            _buildField('LOCATION', 'Venue, City', _locationCtrl),
+            const SizedBox(height: 16),
+            _buildField(
+                'DESCRIPTION', "What's this event about?", _descCtrl,
+                maxLines: 3),
+            const SizedBox(height: 16),
+
+            // Start Date Picker
+            _buildDateRow(
+              label: 'START DATE',
+              value: dateFormat.format(_startDate),
+              onTap: _pickStartDate,
+            ),
+            const SizedBox(height: 16),
+
+            // End Date Picker
+            _buildDateRow(
+              label: 'END DATE',
+              value: dateFormat.format(_endDate),
+              onTap: _pickEndDate,
+            ),
+            const SizedBox(height: 24),
+
+            // Create button
+            GestureDetector(
+              onTap:
+                  _nameCtrl.text.trim().isNotEmpty ? _handleCreate : null,
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: _nameCtrl.text.trim().isNotEmpty
+                      ? const LinearGradient(
+                          colors: [_primary, _primaryContainer],
+                          begin: Alignment.bottomLeft,
+                          end: Alignment.topRight,
+                        )
+                      : null,
+                  color: _nameCtrl.text.trim().isEmpty ? _surfaceLow : null,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: _nameCtrl.text.trim().isNotEmpty
+                      ? [
+                          BoxShadow(
+                            color: _primaryContainer
+                                .withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Create Event',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildDateRow({
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: _outline,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: _surfaceLow,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.calendar, size: 16, color: _primary),
+                const SizedBox(width: 10),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(fontSize: 14, color: _onSurface),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

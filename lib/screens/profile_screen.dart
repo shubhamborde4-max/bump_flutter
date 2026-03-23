@@ -12,6 +12,8 @@ import 'package:bump/providers/prospects_provider.dart';
 import 'package:bump/providers/events_provider.dart';
 import 'package:bump/providers/nudges_provider.dart';
 import 'package:bump/services/notification_service.dart';
+import 'package:bump/widgets/business_card.dart';
+import 'package:bump/data/models/user_model.dart';
 
 // ── Colors ──────────────────────────────────────────────────────────────────
 const _primary = Color(0xFF5341CD);
@@ -120,15 +122,25 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Card preview with gradient
-                  _buildCardPreview(
-                    firstName: firstName,
-                    lastName: lastName,
-                    title: title,
-                    company: company,
-                    email: email,
-                    phone: phone,
-                  ).animate().fadeIn(duration: 400.ms),
+                  // Flippable business card (tap to flip)
+                  if (user != null)
+                    BusinessCard(
+                      user: user,
+                      style: user.cardStyle,
+                    ).animate().fadeIn(duration: 400.ms),
+                  if (user != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Center(
+                        child: Text(
+                          'Tap card to flip',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: _textMuted,
+                          ),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 20),
 
                   // Stats row
@@ -167,30 +179,12 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsRow(
                           icon: LucideIcons.edit3,
                           label: 'Edit Profile',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Coming soon!'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/edit-profile'),
                         ),
                         _SettingsRow(
                           icon: LucideIcons.wallet,
                           label: 'Card Style',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Coming soon!'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
+                          onTap: () => _showCardStylePicker(context, ref, user),
                         ),
                         _SettingsRow(
                           icon: LucideIcons.bell,
@@ -208,21 +202,12 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         _SettingsRow(
                           icon: LucideIcons.shield,
-                          label: 'Privacy',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Coming soon!'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
+                          label: 'Privacy Policy',
+                          onTap: () => context.push('/privacy-policy'),
                         ),
                         _SettingsRow(
                           icon: LucideIcons.helpCircle,
-                          label: 'Help',
+                          label: 'Help & Support',
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -237,16 +222,7 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsRow(
                           icon: LucideIcons.info,
                           label: 'About',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Coming soon!'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/about'),
                         ),
                         _SettingsRow(
                           icon: LucideIcons.logOut,
@@ -511,6 +487,106 @@ class ProfileScreen extends ConsumerWidget {
                 letterSpacing: 0.5,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCardStylePicker(BuildContext context, WidgetRef ref, User? user) {
+    if (user == null) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _textMuted.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Choose Card Style',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select how your business card looks when shared',
+              style: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+            ),
+            const SizedBox(height: 20),
+            ...[
+              (CardStyle.modern, 'Modern', 'Corporate gradient with photo', LucideIcons.briefcase),
+              (CardStyle.classic, 'Classic', 'Elegant cream with serif fonts', LucideIcons.feather),
+              (CardStyle.minimal, 'Minimal', 'Clean white, minimal layout', LucideIcons.minus),
+            ].map((item) {
+              final isSelected = user.cardStyle == item.$1;
+              return GestureDetector(
+                onTap: () {
+                  ref.read(profileNotifierProvider.notifier).updateProfile(
+                    user.copyWith(cardStyle: item.$1),
+                  );
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFF5341CD).withValues(alpha: 0.08) : _surfaceLight,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF5341CD) : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(item.$4, size: 20, color: isSelected ? const Color(0xFF5341CD) : _textMuted),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.$2,
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: _textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.$3,
+                              style: GoogleFonts.inter(fontSize: 12, color: _textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isSelected)
+                        const Icon(LucideIcons.checkCircle, size: 20, color: Color(0xFF5341CD)),
+                    ],
+                  ),
+                ),
+              );
+            }),
           ],
         ),
       ),

@@ -18,6 +18,22 @@ class User {
   final int totalNudges;
   final double conversionRate;
 
+  // Personal fields
+  final String? mobileNumber;
+  final String? address;
+  final String? profilePicUrl;
+
+  // Work fields
+  final String? companyLogo;
+  final String? department;
+  final String? designation;
+  final String? companyPhone;
+  final String? note;
+  final String? companyAddress;
+
+  // Card customisation
+  final List<String> visibleFields;
+
   const User({
     required this.id,
     this.username = '',
@@ -35,7 +51,26 @@ class User {
     this.totalBumps = 0,
     this.totalNudges = 0,
     this.conversionRate = 0.0,
+    this.mobileNumber,
+    this.address,
+    this.profilePicUrl,
+    this.companyLogo,
+    this.department,
+    this.designation,
+    this.companyPhone,
+    this.note,
+    this.companyAddress,
+    this.visibleFields = _defaultVisibleFields,
   });
+
+  static const List<String> _defaultVisibleFields = [
+    'firstName',
+    'lastName',
+    'email',
+    'phone',
+    'company',
+    'title',
+  ];
 
   String get fullName => '$firstName $lastName';
 
@@ -60,6 +95,16 @@ class User {
     int? totalBumps,
     int? totalNudges,
     double? conversionRate,
+    String? mobileNumber,
+    String? address,
+    String? profilePicUrl,
+    String? companyLogo,
+    String? department,
+    String? designation,
+    String? companyPhone,
+    String? note,
+    String? companyAddress,
+    List<String>? visibleFields,
   }) {
     return User(
       id: id ?? this.id,
@@ -78,6 +123,16 @@ class User {
       totalBumps: totalBumps ?? this.totalBumps,
       totalNudges: totalNudges ?? this.totalNudges,
       conversionRate: conversionRate ?? this.conversionRate,
+      mobileNumber: mobileNumber ?? this.mobileNumber,
+      address: address ?? this.address,
+      profilePicUrl: profilePicUrl ?? this.profilePicUrl,
+      companyLogo: companyLogo ?? this.companyLogo,
+      department: department ?? this.department,
+      designation: designation ?? this.designation,
+      companyPhone: companyPhone ?? this.companyPhone,
+      note: note ?? this.note,
+      companyAddress: companyAddress ?? this.companyAddress,
+      visibleFields: visibleFields ?? this.visibleFields,
     );
   }
 
@@ -97,6 +152,16 @@ class User {
       'website': website,
       'bio': bio,
       'card_style': cardStyle.name,
+      'mobile_number': mobileNumber,
+      'address': address,
+      'profile_pic_url': profilePicUrl,
+      'company_logo': companyLogo,
+      'department': department,
+      'designation': designation,
+      'company_phone': companyPhone,
+      'note': note,
+      'company_address': companyAddress,
+      'visible_fields': visibleFields.join(','),
     };
   }
 
@@ -122,6 +187,25 @@ class User {
       totalBumps: json['total_bumps'] as int? ?? 0,
       totalNudges: json['total_nudges'] as int? ?? 0,
       conversionRate: (json['conversion_rate'] as num?)?.toDouble() ?? 0.0,
+      mobileNumber: json['mobile_number'] as String?,
+      address: json['address'] as String?,
+      profilePicUrl: json['profile_pic_url'] as String?,
+      companyLogo: json['company_logo'] as String?,
+      department: json['department'] as String?,
+      designation: json['designation'] as String?,
+      companyPhone: json['company_phone'] as String?,
+      note: json['note'] as String?,
+      companyAddress: json['company_address'] as String?,
+      visibleFields: _parseVisibleFields(json['visible_fields']),
     );
+  }
+
+  static List<String> _parseVisibleFields(dynamic value) {
+    if (value == null || value == '') return _defaultVisibleFields;
+    if (value is List) return value.cast<String>();
+    if (value is String) {
+      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return _defaultVisibleFields;
   }
 }

@@ -15,6 +15,9 @@ import 'package:bump/screens/prospect_detail_screen.dart';
 import 'package:bump/screens/analytics_screen.dart';
 import 'package:bump/screens/profile_screen.dart';
 import 'package:bump/screens/qr_scanner_screen.dart';
+import 'package:bump/screens/edit_profile_screen.dart';
+import 'package:bump/screens/privacy_policy_screen.dart';
+import 'package:bump/screens/about_screen.dart';
 import 'package:bump/shell/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -120,6 +123,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/qr-scanner',
         builder: (context, state) => const QrScannerScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/privacy-policy',
+        builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: '/about',
+        builder: (context, state) => const AboutScreen(),
       ),
     ],
   );
