@@ -11,7 +11,11 @@ class SupabaseExchangeRepository implements ExchangeRepository {
     required String method,
     String? eventId,
   }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+
     final response = await _client.rpc('handle_exchange', params: {
+      'p_initiator_id': userId,
       'p_receiver_id': receiverId,
       'p_method': method,
       'p_event_id': eventId,
