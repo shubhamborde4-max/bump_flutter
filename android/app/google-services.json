@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "744287950681",
+    "project_id": "lyrics-fefa9",
+    "storage_bucket": "lyrics-fefa9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744287950681:android:b4e3b34c45e9a29e9d1e48",
+        "android_client_info": {
+          "package_name": "com.shubhamborde.bump"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJbgc2m23_o_uJTxq5f1xV11sLKMIGkMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
