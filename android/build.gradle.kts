@@ -19,6 +19,18 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Allow deprecated Kotlin API usage in third-party plugins (nfc_manager uses deprecated toLowerCase)
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.android") {
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions {
+                allWarningsAsErrors.set(false)
+                freeCompilerArgs.addAll("-Xsuppress-version-warnings", "-nowarn")
+            }
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }

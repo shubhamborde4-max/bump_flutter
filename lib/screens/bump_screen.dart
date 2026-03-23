@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:nfc_manager/nfc_manager.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
@@ -15,6 +18,9 @@ import 'package:bump/widgets/avatar.dart';
 import 'package:bump/widgets/glass_card.dart';
 import 'package:bump/widgets/qr_display_widget.dart';
 
+/// The possible states of the NFC bump tab.
+enum _NfcState { checking, available, unavailable, exchangeSuccess }
+
 class BumpScreen extends ConsumerStatefulWidget {
   const BumpScreen({super.key});
 
@@ -25,6 +31,175 @@ class BumpScreen extends ConsumerStatefulWidget {
 class _BumpScreenState extends ConsumerState<BumpScreen>
     with SingleTickerProviderStateMixin {
   int _selectedTab = 0; // 0 = Bump, 1 = QR Code
+
+  _NfcState _nfcState = _NfcState.checking;
+  bool _nfcSessionActive = false;
+
+  /// Holds the exchanged contact info after a successful NFC exchange.
+  Map<String, dynamic>? _exchangeResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkNfcAvailability();
+  }
+
+  @override
+  void dispose() {
+    _stopNfcSession();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // NFC helpers
+  // ---------------------------------------------------------------------------
+
+  Future<void> _checkNfcAvailability() async {
+    try {
+      final isAvailable = await NfcManager.instance.isAvailable();
+      if (!mounted) return;
+      setState(() {
+        _nfcState = isAvailable ? _NfcState.available : _NfcState.unavailable;
+      });
+      if (isAvailable) {
+        _startNfcSession();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _nfcState = _NfcState.unavailable);
+    }
+  }
+
+  void _startNfcSession() {
+    if (_nfcSessionActive) return;
+
+    final profile = ref.read(profileNotifierProvider).valueOrNull;
+    final currentUserId = profile?.id ?? '';
+    if (currentUserId.isEmpty) return;
+
+    final activeEvent = ref.read(activeEventProvider);
+    final eventId = activeEvent?.id ?? '';
+
+    setState(() => _nfcSessionActive = true);
+
+    NfcManager.instance.startSession(
+      onDiscovered: (NfcTag tag) async {
+        final ndef = Ndef.from(tag);
+        if (ndef == null) {
+          NfcManager.instance.stopSession(
+            errorMessage: 'Tag does not support NDEF.',
+          );
+          if (mounted) setState(() => _nfcSessionActive = false);
+          return;
+        }
+
+        // ----- READ incoming exchange URL -----
+        String? otherUserId;
+        if (ndef.cachedMessage != null) {
+          for (final record in ndef.cachedMessage!.records) {
+            final payload = String.fromCharCodes(record.payload);
+            // URI records may have a prefix byte; strip it.
+            final cleaned = payload.startsWith('\u0000')
+                ? payload.substring(1)
+                : payload;
+            if (cleaned.contains('bump://exchange/')) {
+              final uri = Uri.tryParse(
+                cleaned.substring(cleaned.indexOf('bump://exchange/')),
+              );
+              if (uri != null) {
+                otherUserId = uri.pathSegments.isNotEmpty
+                    ? uri.pathSegments.last
+                    : null;
+              }
+            }
+          }
+        }
+
+        // ----- WRITE our exchange URL -----
+        if (ndef.isWritable) {
+          try {
+            final exchangeUri = eventId.isNotEmpty
+                ? Uri.parse('bump://exchange/$currentUserId?event=$eventId')
+                : Uri.parse('bump://exchange/$currentUserId');
+            final message = NdefMessage([
+              NdefRecord.createUri(exchangeUri),
+            ]);
+            await ndef.write(message);
+          } catch (_) {
+            // Write may fail on some tags — that is acceptable.
+          }
+        }
+
+        NfcManager.instance.stopSession();
+        if (mounted) setState(() => _nfcSessionActive = false);
+
+        // ----- Perform the exchange -----
+        if (otherUserId != null && otherUserId.isNotEmpty) {
+          await _performExchange(otherUserId, eventId);
+        } else {
+          // We wrote our URL but didn't receive one — restart listening.
+          if (mounted) _startNfcSession();
+        }
+      },
+      onError: (error) async {
+        NfcManager.instance.stopSession(errorMessage: error.toString());
+        if (mounted) {
+          setState(() => _nfcSessionActive = false);
+          // Restart the session so the user can try again.
+          _startNfcSession();
+        }
+      },
+    );
+  }
+
+  void _stopNfcSession() {
+    if (_nfcSessionActive) {
+      NfcManager.instance.stopSession();
+      _nfcSessionActive = false;
+    }
+  }
+
+  Future<void> _performExchange(String otherUserId, String eventId) async {
+    try {
+      final repo = ref.read(exchangeRepositoryProvider);
+      final result = await repo.performExchange(
+        receiverId: otherUserId,
+        method: 'nfc',
+        eventId: eventId.isNotEmpty ? eventId : null,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _exchangeResult = result;
+        _nfcState = _NfcState.exchangeSuccess;
+      });
+
+      // Refresh the prospects list so the recent-exchanges section updates.
+      ref.invalidate(prospectsProvider);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Exchange failed: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      // Resume listening.
+      _startNfcSession();
+    }
+  }
+
+  void _resetNfc() {
+    setState(() {
+      _nfcState = _NfcState.available;
+      _exchangeResult = null;
+    });
+    _startNfcSession();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +251,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
 
             // Tab Content
             Expanded(
-              child: _selectedTab == 0
-                  ? _buildBumpTab()
-                  : _buildQrTab(),
+              child: _selectedTab == 0 ? _buildBumpTab() : _buildQrTab(),
             ),
 
             // Recent Exchanges
@@ -127,6 +300,10 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Tab button
+  // ---------------------------------------------------------------------------
+
   Widget _buildTabButton(String label, int index) {
     final isSelected = _selectedTab == index;
     return Expanded(
@@ -154,9 +331,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.textMuted,
+                color: isSelected ? AppColors.primary : AppColors.textMuted,
               ),
             ),
           ),
@@ -165,41 +340,231 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Bump tab — NFC
+  // ---------------------------------------------------------------------------
+
   Widget _buildBumpTab() {
+    switch (_nfcState) {
+      case _NfcState.checking:
+        return _buildCheckingState();
+      case _NfcState.available:
+        return _buildNfcAvailableState();
+      case _NfcState.unavailable:
+        return _buildNfcUnavailableState();
+      case _NfcState.exchangeSuccess:
+        return _buildExchangeSuccessState();
+    }
+  }
+
+  // -- Checking --------------------------------------------------------------
+
+  Widget _buildCheckingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Checking NFC...',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+
+  // -- NFC Available ----------------------------------------------------------
+
+  Widget _buildNfcAvailableState() {
     final profileAsync = ref.watch(profileNotifierProvider);
     final userId = profileAsync.valueOrNull?.id ?? '';
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Static NFC icon
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppGradients.hero,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: const Icon(
-            LucideIcons.smartphone,
-            size: 48,
-            color: Colors.white,
-          ),
-        ),
+        // Pulsing concentric rings
+        _buildPulsingRings(),
 
         const SizedBox(height: 32),
 
         Text(
-          'NFC Coming Soon',
+          'Hold phones together',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ).animate().fadeIn(duration: 400.ms),
+
+        const SizedBox(height: 8),
+
+        Text(
+          'Listening for NFC...',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: AppColors.textMuted,
+            height: 1.5,
+          ),
+        ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
+
+        const SizedBox(height: 32),
+
+        // Share Link Instead button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: GestureDetector(
+            onTap: () {
+              final link = 'bump://exchange/$userId';
+              Share.share('Connect with me on Bump! $link');
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.share2,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Share Link Instead',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
+
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  /// Concentric pulsing rings with a phone icon in the centre.
+  Widget _buildPulsingRings() {
+    return SizedBox(
+      width: 200,
+      height: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer ring
+          _buildRing(200, 0),
+          // Middle ring
+          _buildRing(160, 200),
+          // Inner ring
+          _buildRing(120, 400),
+          // Centre icon
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: AppGradients.hero,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(
+              LucideIcons.smartphone,
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRing(double size, int delayMs) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          width: 2,
+        ),
+      ),
+    )
+        .animate(
+          onPlay: (controller) => controller.repeat(reverse: true),
+        )
+        .scaleXY(
+          begin: 0.85,
+          end: 1.0,
+          duration: 1500.ms,
+          delay: Duration(milliseconds: delayMs),
+          curve: Curves.easeInOut,
+        )
+        .fadeIn(
+          duration: 600.ms,
+          delay: Duration(milliseconds: delayMs),
+        );
+  }
+
+  // -- NFC Unavailable --------------------------------------------------------
+
+  Widget _buildNfcUnavailableState() {
+    final profileAsync = ref.watch(profileNotifierProvider);
+    final userId = profileAsync.valueOrNull?.id ?? '';
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surfaceLight,
+          ),
+          child: Icon(
+            LucideIcons.smartphoneNfc,
+            size: 44,
+            color: AppColors.textMuted,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        Text(
+          'NFC not available',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
@@ -210,7 +575,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 48),
           child: Text(
-            'NFC bump exchange is coming in a future update. Use QR codes or share your profile link for now.',
+            'Use QR Code or share your profile link',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
@@ -220,15 +585,185 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
 
-        // Share Profile Link button
+        // Open QR Code button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedTab = 1),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: AppGradients.hero,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.qrCode,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Open QR Code',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Share Link button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 48),
           child: GestureDetector(
             onTap: () {
               final link = 'bump://exchange/$userId';
               Share.share('Connect with me on Bump! $link');
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.share2,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Share Link',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+      ],
+    ).animate().fadeIn(duration: 400.ms);
+  }
+
+  // -- Exchange Success -------------------------------------------------------
+
+  Widget _buildExchangeSuccessState() {
+    final name = _exchangeResult?['first_name'] as String? ?? '';
+    final lastName = _exchangeResult?['last_name'] as String? ?? '';
+    final company = _exchangeResult?['company'] as String? ?? '';
+    final fullName = '$name $lastName'.trim();
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Success checkmark
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppGradients.hero,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: const Icon(
+            LucideIcons.checkCircle,
+            size: 48,
+            color: Colors.white,
+          ),
+        )
+            .animate()
+            .scale(
+              begin: const Offset(0.5, 0.5),
+              end: const Offset(1.0, 1.0),
+              duration: 500.ms,
+              curve: Curves.elasticOut,
+            )
+            .fadeIn(duration: 300.ms),
+
+        const SizedBox(height: 24),
+
+        Text(
+          'Exchange Successful!',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
+
+        const SizedBox(height: 8),
+
+        if (fullName.isNotEmpty)
+          Text(
+            fullName,
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
+
+        if (company.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              company,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.textMuted,
+              ),
+            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
+          ),
+
+        const SizedBox(height: 32),
+
+        // View Profile button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: GestureDetector(
+            onTap: () {
+              final prospectId = _exchangeResult?['prospect_id'] as String?;
+              if (prospectId != null) {
+                context.push('/prospects/$prospectId');
+              }
             },
             child: Container(
               width: double.infinity,
@@ -248,13 +783,13 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    LucideIcons.share2,
+                    LucideIcons.user,
                     size: 18,
                     color: Colors.white,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Share Profile Link',
+                    'View Profile',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -265,12 +800,56 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               ),
             ),
           ),
-        ),
+        ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
+
+        const SizedBox(height: 12),
+
+        // Exchange again button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: GestureDetector(
+            onTap: _resetNfc,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.refreshCw,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Exchange Again',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
 
         const SizedBox(height: 24),
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // QR tab (unchanged)
+  // ---------------------------------------------------------------------------
 
   Widget _buildQrTab() {
     final profileAsync = ref.watch(profileNotifierProvider);
@@ -348,14 +927,16 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               ),
             ),
           ),
-        )
-            .animate()
-            .fadeIn(delay: 200.ms, duration: 400.ms),
+        ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
 
         const SizedBox(height: 24),
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Recent exchange row (unchanged)
+  // ---------------------------------------------------------------------------
 
   Widget _buildExchangeRow(Prospect prospect) {
     final timeAgo = _formatTimeAgo(prospect.exchangeTime);

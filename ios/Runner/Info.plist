@@ -47,6 +47,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NFCReaderUsageDescription</key>
+	<string>Bump uses NFC to exchange contact information with nearby devices.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -28,6 +28,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        // Suppress Kotlin deprecation errors (nfc_manager uses deprecated toLowerCase)
+        allWarningsAsErrors = false
     }
 
     signingConfigs {

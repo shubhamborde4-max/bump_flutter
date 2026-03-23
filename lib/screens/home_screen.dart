@@ -183,7 +183,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Row(
                             children: [
                               Icon(
-                                LucideIcons.radio,
+                                LucideIcons.zap,
                                 color: _primary,
                                 size: 24,
                               ),
@@ -236,17 +236,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              // User avatar
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _surfaceContainer,
-                                  border: Border.all(
-                                    color:
-                                        _primary.withValues(alpha: 0.2),
-                                    width: 2,
+                              // User avatar — taps to Profile
+                              GestureDetector(
+                                onTap: () => context.go('/profile'),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [_primary, _primaryContainer],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    border: Border.all(
+                                      color: _primary.withValues(alpha: 0.2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),

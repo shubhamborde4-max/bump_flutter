@@ -379,6 +379,14 @@ class _ModernFront extends StatelessWidget {
                       user.address!.isNotEmpty)
                     _contactRow(LucideIcons.mapPin, user.address!,
                         Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.8)),
+                  if (isVisible('mobileNumber') && user.mobileNumber != null && user.mobileNumber!.isNotEmpty)
+                    _contactRow(LucideIcons.smartphone, user.mobileNumber!, Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.8)),
+                  if (isVisible('companyPhone') && user.companyPhone != null && user.companyPhone!.isNotEmpty)
+                    _contactRow(LucideIcons.phoneCall, user.companyPhone!, Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.8)),
+                  if (isVisible('companyAddress') && user.companyAddress != null && user.companyAddress!.isNotEmpty)
+                    _contactRow(LucideIcons.building, user.companyAddress!, Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.8)),
+                  if (isVisible('linkedIn') && user.linkedIn != null && user.linkedIn!.isNotEmpty)
+                    _contactRow(LucideIcons.linkedin, user.linkedIn!, Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.8)),
                 ],
               ),
             ),
@@ -550,6 +558,23 @@ class _ClassicFront extends StatelessWidget {
                         _classicMuted, _classicText),
                   if (isVisible('email') && user.email.isNotEmpty)
                     _contactRow(LucideIcons.mail, user.email,
+                        _classicMuted, _classicText),
+                  if (isVisible('address') &&
+                      user.address != null &&
+                      user.address!.isNotEmpty)
+                    _contactRow(LucideIcons.mapPin, user.address!,
+                        _classicMuted, _classicText),
+                  if (isVisible('mobileNumber') && user.mobileNumber != null && user.mobileNumber!.isNotEmpty)
+                    _contactRow(LucideIcons.smartphone, user.mobileNumber!,
+                        _classicMuted, _classicText),
+                  if (isVisible('companyPhone') && user.companyPhone != null && user.companyPhone!.isNotEmpty)
+                    _contactRow(LucideIcons.phoneCall, user.companyPhone!,
+                        _classicMuted, _classicText),
+                  if (isVisible('companyAddress') && user.companyAddress != null && user.companyAddress!.isNotEmpty)
+                    _contactRow(LucideIcons.building, user.companyAddress!,
+                        _classicMuted, _classicText),
+                  if (isVisible('linkedIn') && user.linkedIn != null && user.linkedIn!.isNotEmpty)
+                    _contactRow(LucideIcons.linkedin, user.linkedIn!,
                         _classicMuted, _classicText),
                 ],
               ),
@@ -736,6 +761,12 @@ class _MinimalFront extends StatelessWidget {
                           if (isVisible('email') && user.email.isNotEmpty)
                             _contactRow(LucideIcons.mail, user.email,
                                 AppColors.accent, AppColors.textSecondary),
+                          if (isVisible('mobileNumber') && user.mobileNumber != null && user.mobileNumber!.isNotEmpty)
+                            _contactRow(LucideIcons.smartphone, user.mobileNumber!,
+                                AppColors.accent, AppColors.textSecondary),
+                          if (isVisible('companyPhone') && user.companyPhone != null && user.companyPhone!.isNotEmpty)
+                            _contactRow(LucideIcons.phoneCall, user.companyPhone!,
+                                AppColors.accent, AppColors.textSecondary),
                         ],
                       ),
                     ),
@@ -752,6 +783,12 @@ class _MinimalFront extends StatelessWidget {
                               user.address != null &&
                               user.address!.isNotEmpty)
                             _contactRow(LucideIcons.mapPin, user.address!,
+                                AppColors.accent, AppColors.textSecondary),
+                          if (isVisible('companyAddress') && user.companyAddress != null && user.companyAddress!.isNotEmpty)
+                            _contactRow(LucideIcons.building, user.companyAddress!,
+                                AppColors.accent, AppColors.textSecondary),
+                          if (isVisible('linkedIn') && user.linkedIn != null && user.linkedIn!.isNotEmpty)
+                            _contactRow(LucideIcons.linkedin, user.linkedIn!,
                                 AppColors.accent, AppColors.textSecondary),
                         ],
                       ),
