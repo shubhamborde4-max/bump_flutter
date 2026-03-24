@@ -136,7 +136,7 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
                   final phone = (result['receiver'] != null ? receiver['phone'] : result['phone']) as String? ?? '';
                   final company = receiver['company'] as String? ?? '';
                   final title = receiver['title'] as String? ?? '';
-                  final saved = await ContactService.saveToContacts(
+                  final saveResult = await ContactService.saveToContacts(
                     firstName: firstName,
                     lastName: lastName,
                     phone: phone.isNotEmpty ? phone : null,
@@ -145,10 +145,15 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
                     title: title.isNotEmpty ? title : null,
                   );
                   if (context.mounted) {
+                    final (msg, color) = switch (saveResult) {
+                      'saved' => ('Contact saved!', Colors.green.shade600),
+                      'exists' => ('Contact already saved', Colors.blue.shade600),
+                      _ => ('Permission denied', Colors.red.shade600),
+                    };
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(saved ? 'Contact saved!' : 'Permission denied'),
-                        backgroundColor: saved ? Colors.green.shade600 : Colors.red.shade600,
+                        content: Text(msg),
+                        backgroundColor: color,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),

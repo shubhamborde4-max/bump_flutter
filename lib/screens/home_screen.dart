@@ -752,7 +752,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final gradientPair = AppGradients
         .avatarGradients[index % AppGradients.avatarGradients.length];
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/prospects/${prospect.id}'),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -843,6 +845,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

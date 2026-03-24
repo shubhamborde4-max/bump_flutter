@@ -823,7 +823,7 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
               final title = recv['title'] as String? ?? '';
               final linkedIn = recv['linkedin'] as String?;
 
-              final saved = await ContactService.saveToContacts(
+              final result = await ContactService.saveToContacts(
                 firstName: firstName,
                 lastName: lastName,
                 phone: phone.isNotEmpty ? phone : null,
@@ -833,10 +833,15 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
                 linkedIn: linkedIn,
               );
               if (!mounted) return;
+              final (msg, color) = switch (result) {
+                'saved' => ('Contact saved!', Colors.green.shade600),
+                'exists' => ('Contact already saved', Colors.blue.shade600),
+                _ => ('Permission denied', Colors.red.shade600),
+              };
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(saved ? 'Contact saved!' : 'Permission denied'),
-                  backgroundColor: saved ? Colors.green.shade600 : Colors.red.shade600,
+                  content: Text(msg),
+                  backgroundColor: color,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),

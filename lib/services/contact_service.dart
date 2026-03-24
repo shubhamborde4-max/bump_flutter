@@ -2,8 +2,8 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 
 class ContactService {
   /// Save a prospect's info as a phone contact.
-  /// Returns true if saved successfully.
-  static Future<bool> saveToContacts({
+  /// Returns 'saved' if new contact created, 'exists' if already saved, 'denied' if permission denied.
+  static Future<String> saveToContacts({
     required String firstName,
     required String lastName,
     String? phone,
@@ -13,9 +13,29 @@ class ContactService {
     String? linkedIn,
     String? note,
   }) async {
-    // Request permission
     if (!await FlutterContacts.requestPermission()) {
-      return false;
+      return 'denied';
+    }
+
+    // Check for duplicate: match by name + (phone or email)
+    final existing = await FlutterContacts.getContacts(
+      withProperties: true,
+    );
+
+    final fullName = '$firstName $lastName'.trim().toLowerCase();
+    for (final c in existing) {
+      final cName = '${c.name.first} ${c.name.last}'.trim().toLowerCase();
+      if (cName == fullName) {
+        // Name matches — check phone or email
+        final hasMatchingPhone = phone != null && phone.isNotEmpty &&
+            c.phones.any((p) => p.number.replaceAll(RegExp(r'[^0-9+]'), '') == phone.replaceAll(RegExp(r'[^0-9+]'), ''));
+        final hasMatchingEmail = email != null && email.isNotEmpty &&
+            c.emails.any((e) => e.address.toLowerCase() == email.toLowerCase());
+
+        if (hasMatchingPhone || hasMatchingEmail || (phone == null && email == null)) {
+          return 'exists';
+        }
+      }
     }
 
     final contact = Contact(
@@ -40,6 +60,6 @@ class ContactService {
     );
 
     await contact.insert();
-    return true;
+    return 'saved';
   }
 }

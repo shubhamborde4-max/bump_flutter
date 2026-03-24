@@ -314,7 +314,7 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                             color: const Color(0xFF4CAF50),
                             label: 'Save',
                             onTap: () async {
-                              final saved = await ContactService.saveToContacts(
+                              final result = await ContactService.saveToContacts(
                                 firstName: prospect.firstName,
                                 lastName: prospect.lastName,
                                 phone: prospect.phone,
@@ -325,10 +325,15 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                 note: prospect.notes,
                               );
                               if (!context.mounted) return;
+                              final (msg, color) = switch (result) {
+                                'saved' => ('Contact saved!', Colors.green.shade600),
+                                'exists' => ('Contact already saved', Colors.blue.shade600),
+                                _ => ('Permission denied', Colors.red.shade600),
+                              };
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(saved ? 'Contact saved!' : 'Permission denied'),
-                                  backgroundColor: saved ? Colors.green.shade600 : Colors.red.shade600,
+                                  content: Text(msg),
+                                  backgroundColor: color,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),

@@ -69,6 +69,38 @@ class ProspectsNotifier extends AsyncNotifier<List<Prospect>> {
     }
   }
 
+  Future<void> addProspect({
+    required String firstName,
+    required String lastName,
+    String email = '',
+    String phone = '',
+    String company = '',
+    String title = '',
+    String eventId = '',
+    String notes = '',
+    String method = 'manual',
+  }) async {
+    final prospect = Prospect(
+      id: '', // Will be assigned by Supabase
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      company: company,
+      title: title,
+      eventId: eventId,
+      notes: notes,
+      exchangeMethod: ExchangeMethodX.fromString(method),
+      exchangeTime: DateTime.now(),
+    );
+
+    final repo = ref.read(prospectsRepositoryProvider);
+    final created = await repo.createProspect(prospect);
+
+    final current = state.valueOrNull ?? [];
+    state = AsyncData([created, ...current]);
+  }
+
   Future<void> deleteProspect(String id) async {
     final previous = state;
     final current = state.valueOrNull ?? [];

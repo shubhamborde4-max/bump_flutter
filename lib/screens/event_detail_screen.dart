@@ -172,6 +172,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
         return Scaffold(
           backgroundColor: _background,
+          floatingActionButton: _buildEventActionsFab(event),
           body: RefreshIndicator(
             color: _primary,
             onRefresh: () async {
@@ -392,6 +393,202 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEventActionsFab(Event event) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Scan QR
+        FloatingActionButton.small(
+          heroTag: 'scan_qr',
+          backgroundColor: _accent,
+          onPressed: () => context.push('/qr-scanner?eventId=${event.id}'),
+          child: const Icon(LucideIcons.scan, color: Colors.white, size: 20),
+        ),
+        const SizedBox(height: 8),
+        // Bump / NFC
+        FloatingActionButton.small(
+          heroTag: 'nfc_bump',
+          backgroundColor: _primary,
+          onPressed: () => context.push('/bump?eventId=${event.id}'),
+          child: const Icon(LucideIcons.zap, color: Colors.white, size: 20),
+        ),
+        const SizedBox(height: 8),
+        // Main FAB
+        FloatingActionButton.extended(
+          heroTag: 'add_contact',
+          backgroundColor: _primary,
+          onPressed: () => _showAddContactSheet(event),
+          icon: const Icon(LucideIcons.userPlus, color: Colors.white),
+          label: Text(
+            'Add Contact',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddContactSheet(Event event) {
+    final firstNameCtrl = TextEditingController();
+    final lastNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final companyCtrl = TextEditingController();
+    final titleCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.only(
+          top: 24,
+          left: 24,
+          right: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Add Contact',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Met at ${event.name}',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: _textMuted,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _sheetField(firstNameCtrl, 'First Name')),
+                  const SizedBox(width: 12),
+                  Expanded(child: _sheetField(lastNameCtrl, 'Last Name')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _sheetField(emailCtrl, 'Email'),
+              const SizedBox(height: 12),
+              _sheetField(phoneCtrl, 'Phone'),
+              const SizedBox(height: 12),
+              _sheetField(companyCtrl, 'Company'),
+              const SizedBox(height: 12),
+              _sheetField(titleCtrl, 'Title / Designation'),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (firstNameCtrl.text.isEmpty && lastNameCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Name is required')),
+                      );
+                      return;
+                    }
+
+                    try {
+                      await ref.read(prospectsProvider.notifier).addProspect(
+                        firstName: firstNameCtrl.text.trim(),
+                        lastName: lastNameCtrl.text.trim(),
+                        email: emailCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                        company: companyCtrl.text.trim(),
+                        title: titleCtrl.text.trim(),
+                        eventId: event.id,
+                        notes: 'Met at ${event.name}',
+                        method: 'manual',
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Contact added!'),
+                            backgroundColor: Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed: $e'),
+                            backgroundColor: Colors.red.shade600,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(
+                    'Add Contact',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetField(TextEditingController ctrl, String label) {
+    return TextField(
+      controller: ctrl,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        filled: true,
+        fillColor: _surfaceLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      style: GoogleFonts.inter(fontSize: 14, color: _textPrimary),
     );
   }
 
