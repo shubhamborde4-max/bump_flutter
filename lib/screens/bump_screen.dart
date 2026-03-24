@@ -681,9 +681,11 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
   // -- Exchange Success -------------------------------------------------------
 
   Widget _buildExchangeSuccessState() {
-    final name = _exchangeResult?['first_name'] as String? ?? '';
-    final lastName = _exchangeResult?['last_name'] as String? ?? '';
-    final company = _exchangeResult?['company'] as String? ?? '';
+    // The RPC returns { exchange_id, receiver: { id, first_name, ... } }
+    final receiver = _exchangeResult?['receiver'] as Map<String, dynamic>? ?? _exchangeResult ?? {};
+    final name = receiver['first_name'] as String? ?? '';
+    final lastName = receiver['last_name'] as String? ?? '';
+    final company = receiver['company'] as String? ?? '';
     final fullName = '$name $lastName'.trim();
 
     return Column(
@@ -761,9 +763,11 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
           padding: const EdgeInsets.symmetric(horizontal: 48),
           child: GestureDetector(
             onTap: () {
-              final prospectId = _exchangeResult?['prospect_id'] as String?;
-              if (prospectId != null) {
-                context.push('/prospects/$prospectId');
+              final recv = _exchangeResult?['receiver'] as Map<String, dynamic>? ?? _exchangeResult ?? {};
+              final recvId = recv['id'] as String?;
+              if (recvId != null) {
+                // Navigate to prospect list filtered by this exchange
+                context.push('/prospects/$recvId');
               }
             },
             child: Container(
@@ -810,13 +814,14 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
           padding: const EdgeInsets.symmetric(horizontal: 48),
           child: GestureDetector(
             onTap: () async {
-              final firstName = _exchangeResult?['first_name'] as String? ?? '';
-              final lastName = _exchangeResult?['last_name'] as String? ?? '';
-              final email = _exchangeResult?['email'] as String? ?? '';
-              final phone = _exchangeResult?['phone'] as String? ?? '';
-              final company = _exchangeResult?['company'] as String? ?? '';
-              final title = _exchangeResult?['title'] as String? ?? '';
-              final linkedIn = _exchangeResult?['linkedin'] as String?;
+              final recv = _exchangeResult?['receiver'] as Map<String, dynamic>? ?? _exchangeResult ?? {};
+              final firstName = recv['first_name'] as String? ?? '';
+              final lastName = recv['last_name'] as String? ?? '';
+              final email = recv['email'] as String? ?? '';
+              final phone = recv['phone'] as String? ?? '';
+              final company = recv['company'] as String? ?? '';
+              final title = recv['title'] as String? ?? '';
+              final linkedIn = recv['linkedin'] as String?;
 
               final saved = await ContactService.saveToContacts(
                 firstName: firstName,
@@ -1009,48 +1014,53 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
   Widget _buildExchangeRow(Prospect prospect) {
     final timeAgo = _formatTimeAgo(prospect.exchangeTime);
 
-    return GlassCard(
-      opacity: 0.85,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          BumpAvatar(
-            firstName: prospect.firstName,
-            lastName: prospect.lastName,
-            uri: prospect.avatar,
-            size: 36,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prospect.fullName,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  prospect.company,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => context.push('/prospects/${prospect.id}'),
+      child: GlassCard(
+        opacity: 0.85,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            BumpAvatar(
+              firstName: prospect.firstName,
+              lastName: prospect.lastName,
+              uri: prospect.avatar,
+              size: 36,
             ),
-          ),
-          Text(
-            timeAgo,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: AppColors.textMuted,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prospect.fullName,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    prospect.company,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Icon(LucideIcons.chevronRight, size: 16, color: AppColors.textMuted),
+            const SizedBox(width: 4),
+            Text(
+              timeAgo,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
