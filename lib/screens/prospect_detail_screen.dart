@@ -17,6 +17,7 @@ import 'package:bump/providers/nudges_provider.dart';
 import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/data/models/nudge_model.dart';
 import 'package:bump/screens/nudge_sheet.dart';
+import 'package:bump/services/contact_service.dart';
 
 // ── Colors ──────────────────────────────────────────────────────────────────
 const _primary = Color(0xFF5341CD);
@@ -305,6 +306,33 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                               if (url != null && url.isNotEmpty) {
                                 launchUrl(Uri.parse(url));
                               }
+                            },
+                          ),
+                          const SizedBox(width: 24),
+                          _ActionCircle(
+                            icon: LucideIcons.userPlus,
+                            color: const Color(0xFF4CAF50),
+                            label: 'Save',
+                            onTap: () async {
+                              final saved = await ContactService.saveToContacts(
+                                firstName: prospect.firstName,
+                                lastName: prospect.lastName,
+                                phone: prospect.phone,
+                                email: prospect.email,
+                                company: prospect.company,
+                                title: prospect.title,
+                                linkedIn: prospect.linkedIn,
+                                note: prospect.notes,
+                              );
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(saved ? 'Contact saved!' : 'Permission denied'),
+                                  backgroundColor: saved ? Colors.green.shade600 : Colors.red.shade600,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              );
                             },
                           ),
                         ],

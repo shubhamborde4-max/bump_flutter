@@ -53,6 +53,8 @@ dependencies:
   nfc_manager: ^3.5.0
   csv: ^6.0.0
   path_provider: ^2.1.5
+  shared_preferences: ^2.3.4
+  flutter_contacts: ^1.1.9+2
 
 dev_dependencies:
   flutter_test:

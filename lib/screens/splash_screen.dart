@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
-import 'package:bump/providers/app_state.dart';
 import 'package:bump/providers/profile_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -37,11 +37,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _performNavigation() async {
-    await Future.delayed(const Duration(milliseconds: 2500));
-    if (!mounted) return;
-
-    final hasCompletedOnboarding = ref.read(hasCompletedOnboardingProvider);
+    final prefs = await SharedPreferences.getInstance();
+    final hasCompletedOnboarding =
+        prefs.getBool('hasCompletedOnboarding') ?? false;
     final session = Supabase.instance.client.auth.currentSession;
+
+    // Shorter delay for returning users, full splash for first-timers
+    final delay = hasCompletedOnboarding ? 1500 : 2500;
+    await Future.delayed(Duration(milliseconds: delay));
+    if (!mounted) return;
 
     if (!hasCompletedOnboarding) {
       context.go('/onboarding');

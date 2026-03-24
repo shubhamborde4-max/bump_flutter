@@ -17,6 +17,7 @@ import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/widgets/avatar.dart';
 import 'package:bump/widgets/glass_card.dart';
 import 'package:bump/widgets/qr_display_widget.dart';
+import 'package:bump/services/contact_service.dart';
 
 /// The possible states of the NFC bump tab.
 enum _NfcState { checking, available, unavailable, exchangeSuccess }
@@ -801,6 +802,73 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
             ),
           ),
         ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
+
+        const SizedBox(height: 12),
+
+        // Save to Contacts button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: GestureDetector(
+            onTap: () async {
+              final firstName = _exchangeResult?['first_name'] as String? ?? '';
+              final lastName = _exchangeResult?['last_name'] as String? ?? '';
+              final email = _exchangeResult?['email'] as String? ?? '';
+              final phone = _exchangeResult?['phone'] as String? ?? '';
+              final company = _exchangeResult?['company'] as String? ?? '';
+              final title = _exchangeResult?['title'] as String? ?? '';
+              final linkedIn = _exchangeResult?['linkedin'] as String?;
+
+              final saved = await ContactService.saveToContacts(
+                firstName: firstName,
+                lastName: lastName,
+                phone: phone.isNotEmpty ? phone : null,
+                email: email.isNotEmpty ? email : null,
+                company: company.isNotEmpty ? company : null,
+                title: title.isNotEmpty ? title : null,
+                linkedIn: linkedIn,
+              );
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(saved ? 'Contact saved!' : 'Permission denied'),
+                  backgroundColor: saved ? Colors.green.shade600 : Colors.red.shade600,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: const Color(0xFF4CAF50),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.userPlus,
+                    size: 18,
+                    color: Color(0xFF4CAF50),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Save to Contacts',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF4CAF50),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(delay: 550.ms, duration: 400.ms),
 
         const SizedBox(height: 12),
 

@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
-import 'package:bump/providers/app_state.dart';
 import 'package:bump/widgets/gradient_button.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -47,8 +47,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _onGetStarted() {
-    ref.read(hasCompletedOnboardingProvider.notifier).set(true);
+  Future<void> _onGetStarted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasCompletedOnboarding', true);
+    if (!mounted) return;
     context.go('/auth');
   }
 
