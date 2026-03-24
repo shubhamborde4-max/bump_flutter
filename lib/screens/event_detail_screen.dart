@@ -404,7 +404,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         FloatingActionButton.small(
           heroTag: 'scan_qr',
           backgroundColor: _accent,
-          onPressed: () => context.push('/qr-scanner?eventId=${event.id}'),
+          onPressed: () => context.push('/qr-scanner', extra: event.id),
           child: const Icon(LucideIcons.scan, color: Colors.white, size: 20),
         ),
         const SizedBox(height: 8),
@@ -412,7 +412,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         FloatingActionButton.small(
           heroTag: 'nfc_bump',
           backgroundColor: _primary,
-          onPressed: () => context.push('/bump?eventId=${event.id}'),
+          onPressed: () => context.go('/bump'),
           child: const Icon(LucideIcons.zap, color: Colors.white, size: 20),
         ),
         const SizedBox(height: 8),

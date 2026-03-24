@@ -122,7 +122,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/qr-scanner',
-        builder: (context, state) => const QrScannerScreen(),
+        builder: (context, state) => QrScannerScreen(
+          eventId: state.extra as String?,
+        ),
       ),
       GoRoute(
         path: '/edit-profile',

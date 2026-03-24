@@ -10,7 +10,8 @@ import 'package:bump/providers/exchange_provider.dart';
 import 'package:bump/services/contact_service.dart';
 
 class QrScannerScreen extends ConsumerStatefulWidget {
-  const QrScannerScreen({super.key});
+  final String? eventId;
+  const QrScannerScreen({super.key, this.eventId});
 
   @override
   ConsumerState<QrScannerScreen> createState() => _QrScannerScreenState();
@@ -77,10 +78,11 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
 
     try {
       final exchangeRepo = ref.read(exchangeRepositoryProvider);
+      final effectiveEventId = eventId ?? widget.eventId;
       final result = await exchangeRepo.performExchange(
         receiverId: userId,
         method: 'qr',
-        eventId: eventId,
+        eventId: effectiveEventId,
       );
 
       if (mounted) {
