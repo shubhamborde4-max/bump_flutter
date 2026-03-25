@@ -1,17 +1,13 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bump/core/utils/authenticated_repository.dart';
 import 'package:bump/data/repositories/device_repository.dart';
 
-class SupabaseDeviceRepository implements DeviceRepository {
-  SupabaseClient get _client => Supabase.instance.client;
-
-  String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw AuthException('Session expired. Please sign in again.');
-    }
-    return user.id;
-  }
+class SupabaseDeviceRepository
+    with AuthenticatedRepository
+    implements DeviceRepository {
+  @override
+  SupabaseClient get client => Supabase.instance.client;
 
   @override
   Future<void> upsertDevice({
@@ -19,9 +15,9 @@ class SupabaseDeviceRepository implements DeviceRepository {
     required String platform,
     String? deviceName,
   }) async {
-    await _client.from('devices').upsert(
+    await client.from('devices').upsert(
       {
-        'user_id': _userId,
+        'user_id': currentUserId,
         'fcm_token': fcmToken,
         'platform': platform,
         'device_name': deviceName,
@@ -34,13 +30,13 @@ class SupabaseDeviceRepository implements DeviceRepository {
 
   @override
   Future<void> deactivateDevice(String fcmToken) async {
-    await _client
+    await client
         .from('devices')
         .update({
           'is_active': false,
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('fcm_token', fcmToken)
-        .eq('user_id', _userId);
+        .eq('user_id', currentUserId);
   }
 }

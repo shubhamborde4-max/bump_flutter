@@ -19,6 +19,12 @@ class StatusBadge extends StatelessWidget {
   final String status;
   final StatusBadgeSize size;
 
+  static String _capitalize(String s) {
+    if (s.isEmpty) return 'Unknown';
+    if (s.length == 1) return s.toUpperCase();
+    return s[0].toUpperCase() + s.substring(1).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (status.isEmpty) return const SizedBox.shrink();
@@ -52,7 +58,7 @@ class StatusBadge extends StatelessWidget {
           ),
           SizedBox(width: isSmall ? 4 : 6),
           Text(
-            status[0].toUpperCase() + status.substring(1).toLowerCase(),
+            _capitalize(status),
             style: TextStyle(
               color: color,
               fontSize: fontSize,

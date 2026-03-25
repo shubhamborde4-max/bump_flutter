@@ -16,11 +16,11 @@ class MainShell extends StatelessWidget {
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/bump')) return 1;
-    if (location.startsWith('/events')) return 2;
-    if (location.startsWith('/analytics')) return 3;
-    if (location.startsWith('/profile')) return 4;
+    if (location == '/home') return 0;
+    if (location == '/bump') return 1;
+    if (location == '/events') return 2;
+    if (location == '/analytics') return 3;
+    if (location == '/profile') return 4;
     return 0;
   }
 

@@ -18,13 +18,15 @@ import 'package:bump/screens/qr_scanner_screen.dart';
 import 'package:bump/screens/edit_profile_screen.dart';
 import 'package:bump/screens/privacy_policy_screen.dart';
 import 'package:bump/screens/about_screen.dart';
+import 'package:bump/screens/forgot_password_screen.dart';
+import 'package:bump/screens/delete_account_screen.dart';
 import 'package:bump/shell/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Routes that do not require authentication.
-const _publicRoutes = {'/', '/onboarding', '/auth'};
+const _publicRoutes = {'/', '/onboarding', '/auth', '/forgot-password'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -67,6 +69,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile-setup',
         builder: (context, state) => const ProfileSetupScreen(),
+      ),
+      // Forgot Password
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
       // Main app with bottom navigation
@@ -137,6 +144,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/about',
         builder: (context, state) => const AboutScreen(),
+      ),
+      GoRoute(
+        path: '/delete-account',
+        builder: (context, state) => const DeleteAccountScreen(),
       ),
     ],
   );

@@ -1,40 +1,37 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bump/core/utils/authenticated_repository.dart';
+import 'package:bump/core/utils/safe_cast.dart';
 import 'package:bump/data/models/template_model.dart';
 import 'package:bump/data/repositories/template_repository.dart';
 
-class SupabaseTemplateRepository implements TemplateRepository {
-  SupabaseClient get _client => Supabase.instance.client;
-
-  String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw AuthException('Session expired. Please sign in again.');
-    }
-    return user.id;
-  }
+class SupabaseTemplateRepository
+    with AuthenticatedRepository
+    implements TemplateRepository {
+  @override
+  SupabaseClient get client => Supabase.instance.client;
 
   @override
   Future<List<Template>> getTemplates() async {
     // Fetch system templates (user_id is null) plus user's own templates
-    final response = await _client
+    final response = await client
         .from('templates')
         .select()
-        .or('user_id.is.null,user_id.eq.$_userId')
+        .or('user_id.is.null,user_id.eq.$currentUserId')
         .order('created_at', ascending: false);
 
-    return (response as List)
-        .map((json) => Template.fromJson(json as Map<String, dynamic>))
+    return safeListCast(response)
+        .map((json) => Template.fromJson(json))
         .toList();
   }
 
   @override
   Future<Template> createTemplate(Template template) async {
     final data = template.toJson();
-    data['user_id'] = _userId;
+    data['user_id'] = currentUserId;
     data.remove('id');
 
-    final response = await _client
+    final response = await client
         .from('templates')
         .insert(data)
         .select()
@@ -45,10 +42,10 @@ class SupabaseTemplateRepository implements TemplateRepository {
 
   @override
   Future<void> deleteTemplate(String id) async {
-    await _client
+    await client
         .from('templates')
         .delete()
         .eq('id', id)
-        .eq('user_id', _userId);
+        .eq('user_id', currentUserId);
   }
 }

@@ -321,7 +321,7 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                             icon: LucideIcons.phone,
                             color: const Color(0xFF00BCD4),
                             label: 'Call',
-                            onTap: () {
+                            onTap: () async {
                               final phone = prospect.phone;
                               if (phone.isEmpty || !_isValidPhone(phone)) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -334,7 +334,16 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                 );
                                 return;
                               }
-                              launchUrl(Uri.parse('tel:$phone'));
+                              try {
+                                final uri = Uri.parse('tel:$phone');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                } else {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link')));
+                                }
+                              } catch (e) {
+                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to open link')));
+                              }
                             },
                           ),
                           const SizedBox(width: 24),
@@ -350,11 +359,19 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                             icon: LucideIcons.mail,
                             color: _warning,
                             label: 'Email',
-                            onTap: () {
+                            onTap: () async {
                               final email = prospect.email;
                               if (email.isNotEmpty) {
-                                launchUrl(
-                                    Uri.parse('mailto:$email'));
+                                try {
+                                  final uri = Uri.parse('mailto:$email');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  } else {
+                                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link')));
+                                  }
+                                } catch (e) {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to open link')));
+                                }
                               }
                             },
                           ),
@@ -363,10 +380,19 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                             icon: LucideIcons.link2,
                             color: _primary,
                             label: 'LinkedIn',
-                            onTap: () {
+                            onTap: () async {
                               final url = prospect.linkedIn;
                               if (url != null && url.isNotEmpty) {
-                                launchUrl(Uri.parse(url));
+                                try {
+                                  final uri = Uri.parse(url);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  } else {
+                                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link')));
+                                  }
+                                } catch (e) {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to open link')));
+                                }
                               }
                             },
                           ),
@@ -541,8 +567,18 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                   icon: LucideIcons.link2,
                                   label: 'LinkedIn',
                                   value: prospect.linkedIn!,
-                                  onTap: () => launchUrl(Uri.parse(
-                                      prospect.linkedIn!)),
+                                  onTap: () async {
+                                    try {
+                                      final uri = Uri.parse(prospect.linkedIn!);
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                      } else {
+                                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link')));
+                                      }
+                                    } catch (e) {
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to open link')));
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -565,7 +601,7 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                     () => _editingNotes = true),
                                 onChanged: (val) {
                                   _debounceTimer?.cancel();
-                                  _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+                                  _debounceTimer = Timer(const Duration(milliseconds: 500), () {
                                     ref
                                         .read(prospectsProvider
                                             .notifier)

@@ -488,14 +488,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           controller: _firstNameController,
           label: 'First Name',
           hint: 'John',
-          maxLength: 100,
+          maxLength: 50,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           controller: _lastNameController,
           label: 'Last Name',
           hint: 'Doe',
-          maxLength: 100,
+          maxLength: 50,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -543,14 +543,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           controller: _companyController,
           label: 'Company',
           hint: 'Acme Inc.',
-          maxLength: 200,
+          maxLength: 100,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           controller: _titleController,
           label: 'Job Title',
           hint: 'Product Manager',
-          maxLength: 200,
+          maxLength: 100,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -558,7 +558,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'LinkedIn',
           hint: 'linkedin.com/in/johndoe',
           keyboardType: TextInputType.url,
-          maxLength: 255,
+          maxLength: 500,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -566,7 +566,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           label: 'Website',
           hint: 'johndoe.com',
           keyboardType: TextInputType.url,
-          maxLength: 255,
+          maxLength: 500,
         ),
       ],
     );

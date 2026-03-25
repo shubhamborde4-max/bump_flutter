@@ -1,25 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bump/core/utils/authenticated_repository.dart';
+import 'package:bump/core/utils/safe_cast.dart';
 import 'package:bump/data/models/nudge_model.dart';
 import 'package:bump/data/repositories/nudge_repository.dart';
 
-class SupabaseNudgeRepository implements NudgeRepository {
-  SupabaseClient get _client => Supabase.instance.client;
-
-  String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw AuthException('Session expired. Please sign in again.');
-    }
-    return user.id;
-  }
+class SupabaseNudgeRepository
+    with AuthenticatedRepository
+    implements NudgeRepository {
+  @override
+  SupabaseClient get client => Supabase.instance.client;
 
   @override
   Future<List<Nudge>> getNudges({String? prospectId}) async {
-    var query = _client
+    var query = client
         .from('nudges')
         .select()
-        .eq('user_id', _userId);
+        .eq('user_id', currentUserId);
 
     if (prospectId != null) {
       query = query.eq('prospect_id', prospectId);
@@ -27,18 +24,18 @@ class SupabaseNudgeRepository implements NudgeRepository {
 
     final response = await query.order('sent_at', ascending: false);
 
-    return (response as List)
-        .map((json) => Nudge.fromJson(json as Map<String, dynamic>))
+    return safeListCast(response)
+        .map((json) => Nudge.fromJson(json))
         .toList();
   }
 
   @override
   Future<Nudge> createNudge(Nudge nudge) async {
     final data = nudge.toJson();
-    data['user_id'] = _userId;
+    data['user_id'] = currentUserId;
     data.remove('id');
 
-    final response = await _client
+    final response = await client
         .from('nudges')
         .insert(data)
         .select()
@@ -49,10 +46,10 @@ class SupabaseNudgeRepository implements NudgeRepository {
 
   @override
   Future<void> updateNudgeStatus(String id, String status) async {
-    await _client
+    await client
         .from('nudges')
         .update({'status': status})
         .eq('id', id)
-        .eq('user_id', _userId);
+        .eq('user_id', currentUserId);
   }
 }

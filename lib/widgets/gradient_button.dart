@@ -22,7 +22,7 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = small ? 44.0 : 56.0;
+    final height = small ? 48.0 : 56.0;
     final fontSize = small ? 14.0 : 16.0;
 
     return AnimatedPressable(
@@ -53,13 +53,17 @@ class GradientButton extends StatelessWidget {
               icon!,
               const SizedBox(width: 8),
             ],
-            Text(
-              title,
-              style: TextStyle(
-                color: disabled ? AppColors.textMuted : Colors.white,
-                fontSize: fontSize,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: disabled ? AppColors.textMuted : Colors.white,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
               ),
             ),
           ],

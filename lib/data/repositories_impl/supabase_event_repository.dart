@@ -1,39 +1,36 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bump/core/utils/authenticated_repository.dart';
+import 'package:bump/core/utils/safe_cast.dart';
 import 'package:bump/data/models/event_model.dart';
 import 'package:bump/data/repositories/event_repository.dart';
 
-class SupabaseEventRepository implements EventRepository {
-  SupabaseClient get _client => Supabase.instance.client;
-
-  String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw AuthException('Session expired. Please sign in again.');
-    }
-    return user.id;
-  }
+class SupabaseEventRepository
+    with AuthenticatedRepository
+    implements EventRepository {
+  @override
+  SupabaseClient get client => Supabase.instance.client;
 
   @override
   Future<List<Event>> getEvents() async {
-    final response = await _client
+    final response = await client
         .from('events')
         .select()
-        .eq('user_id', _userId)
+        .eq('user_id', currentUserId)
         .order('date', ascending: false);
 
-    return (response as List)
-        .map((json) => Event.fromJson(json as Map<String, dynamic>))
+    return safeListCast(response)
+        .map((json) => Event.fromJson(json))
         .toList();
   }
 
   @override
   Future<Event?> getEvent(String id) async {
-    final response = await _client
+    final response = await client
         .from('events')
         .select()
         .eq('id', id)
-        .eq('user_id', _userId)
+        .eq('user_id', currentUserId)
         .maybeSingle();
 
     if (response == null) return null;
@@ -43,10 +40,10 @@ class SupabaseEventRepository implements EventRepository {
   @override
   Future<Event> createEvent(Event event) async {
     final data = event.toJson();
-    data['user_id'] = _userId;
+    data['user_id'] = currentUserId;
     data.remove('id'); // Let Supabase generate the id
 
-    final response = await _client
+    final response = await client
         .from('events')
         .insert(data)
         .select()
@@ -61,19 +58,19 @@ class SupabaseEventRepository implements EventRepository {
     data.remove('id');
     data.remove('user_id');
 
-    await _client.from('events').update(data).eq('id', event.id);
+    await client.from('events').update(data).eq('id', event.id);
   }
 
   @override
   Future<void> deleteEvent(String id) async {
-    await _client.from('events').delete().eq('id', id).eq('user_id', _userId);
+    await client.from('events').delete().eq('id', id).eq('user_id', currentUserId);
   }
 
   @override
   Future<void> setActiveEvent(String id) async {
     // Atomic: deactivate all then activate target in a single RPC call
-    await _client.rpc('activate_event', params: {
-      'p_user_id': _userId,
+    await client.rpc('set_active_event', params: {
+      'p_user_id': currentUserId,
       'p_event_id': id,
     });
   }

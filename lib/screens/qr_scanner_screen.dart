@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
 import 'package:bump/providers/exchange_provider.dart';
@@ -34,6 +35,10 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
     if (barcode == null || barcode.rawValue == null) return;
 
     final rawValue = barcode.rawValue!;
+
+    // BUG-026: Stop scanner immediately to prevent duplicate scans
+    _controller.stop();
+    setState(() => _isProcessing = true);
 
     // Parse the URL: bump://exchange/{userId}?event={eventId}
     String? userId;
@@ -69,12 +74,31 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
             ),
           ),
         );
+        setState(() => _isProcessing = false);
+        _controller.start();
       }
       return;
     }
 
-    setState(() => _isProcessing = true);
-    _controller.stop();
+    // BUG-044: Prevent self-scan
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == currentUserId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('You cannot scan your own QR code'),
+            backgroundColor: const Color(0xFFBA1A1A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        setState(() => _isProcessing = false);
+        _controller.start();
+      }
+      return;
+    }
 
     try {
       final exchangeRepo = ref.read(exchangeRepositoryProvider);

@@ -19,6 +19,12 @@ import 'package:bump/services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Lock orientation to portrait
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   // BUG-025: Global error handler for crash reporting
   FlutterError.onError = (details) {
     FlutterError.presentError(details);

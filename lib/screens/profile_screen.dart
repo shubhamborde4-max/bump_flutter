@@ -231,6 +231,13 @@ class ProfileScreen extends ConsumerWidget {
                           showChevron: false,
                           onTap: () => _handleSignOut(context, ref),
                         ),
+                        _SettingsRow(
+                          icon: LucideIcons.trash2,
+                          label: 'Delete Account',
+                          danger: true,
+                          showChevron: true,
+                          onTap: () => context.push('/delete-account'),
+                        ),
                       ],
                     ),
                   ),

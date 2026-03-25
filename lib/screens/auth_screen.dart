@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
+import 'package:bump/core/utils/validators.dart';
 import 'package:bump/providers/auth_provider.dart';
 import 'package:bump/providers/profile_provider.dart';
 import 'package:bump/widgets/gradient_button.dart';
@@ -20,6 +21,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -41,56 +43,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) return;
     if (_isSignUp && _firstNameController.text.trim().isEmpty) return;
 
     setState(() => _isLoading = true);
-
-    // BUG-004: Email format validation
-    final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$');
-    if (!emailRegex.hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter a valid email address'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    // BUG-005: Password strength validation
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Password must be at least 6 characters'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    // BUG-005: Password confirmation check (sign-up only)
-    if (_isSignUp && password != _confirmPasswordController.text.trim()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Passwords do not match'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      setState(() => _isLoading = false);
-      return;
-    }
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
@@ -191,44 +151,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  // BUG-016: Forgot Password flow
-  Future<void> _onForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Enter your email first'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      return;
-    }
-    try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Password reset link sent to $email'),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -300,129 +222,56 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 GlassCard(
                   opacity: 0.9,
                   padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Name fields (sign-up only)
-                      if (_isSignUp) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildField(
-                                controller: _firstNameController,
-                                label: 'First Name',
-                                hint: 'John',
-                                icon: Icons.person_outline,
-                                maxLength: 100,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Name fields (sign-up only)
+                        if (_isSignUp) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildFormField(
+                                  controller: _firstNameController,
+                                  label: 'First Name',
+                                  hint: 'John',
+                                  icon: Icons.person_outline,
+                                  maxLength: 50,
+                                  validator: (v) => Validators.required(v, 'First name'),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildField(
-                                controller: _lastNameController,
-                                label: 'Last Name',
-                                hint: 'Doe',
-                                icon: Icons.person_outline,
-                                maxLength: 100,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildFormField(
+                                  controller: _lastNameController,
+                                  label: 'Last Name',
+                                  hint: 'Doe',
+                                  icon: Icons.person_outline,
+                                  maxLength: 50,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
+                        // Email field
+                        _buildFormField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hint: 'you@example.com',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          maxLength: 255,
+                          validator: Validators.email,
                         ),
+
                         const SizedBox(height: 20),
-                      ],
 
-                      // Email field
-                      _buildField(
-                        controller: _emailController,
-                        label: 'Email',
-                        hint: 'you@example.com',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        maxLength: 255,
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Password field
-                      Text(
-                        'Password',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          hintText: _isSignUp
-                              ? 'Min 6 characters'
-                              : 'Enter your password',
-                          prefixIcon: const Icon(
-                            Icons.lock_outline,
-                            color: AppColors.textMuted,
-                            size: 20,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: AppColors.textMuted,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: AppColors.surfaceLight,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
-                              width: 1.5,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                        ),
-                      ),
-
-                      // BUG-016: Forgot Password link (sign-in only)
-                      if (!_isSignUp) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: _onForgotPassword,
-                            child: Text(
-                              'Forgot Password?',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      // BUG-005: Confirm Password field (sign-up only)
-                      if (_isSignUp) ...[
-                        const SizedBox(height: 20),
+                        // Password field
                         Text(
-                          'Confirm Password',
+                          'Password',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -430,11 +279,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        TextField(
-                          controller: _confirmPasswordController,
-                          obscureText: _obscureConfirmPassword,
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          validator: Validators.password,
                           decoration: InputDecoration(
-                            hintText: 'Re-enter your password',
+                            hintText: _isSignUp
+                                ? 'Min 6 characters'
+                                : 'Enter your password',
                             prefixIcon: const Icon(
                               Icons.lock_outline,
                               color: AppColors.textMuted,
@@ -442,7 +294,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureConfirmPassword
+                                _obscurePassword
                                     ? Icons.visibility_off_outlined
                                     : Icons.visibility_outlined,
                                 color: AppColors.textMuted,
@@ -450,7 +302,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  _obscurePassword = !_obscurePassword;
                                 });
                               },
                             ),
@@ -473,77 +325,158 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           ),
                         ),
-                      ],
 
-                      const SizedBox(height: 28),
-
-                      // Submit button
-                      GradientButton(
-                        title: _isLoading
-                            ? (_isSignUp ? 'Creating Account...' : 'Signing In...')
-                            : (_isSignUp ? 'Create Account' : 'Sign In'),
-                        disabled: _isLoading,
-                        onTap: _isLoading ? null : _onSubmit,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Divider
-                      Row(
-                        children: [
-                          const Expanded(
-                              child: Divider(color: AppColors.surfaceLight)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'or',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.textMuted,
+                        // Forgot Password link (sign-in only)
+                        if (!_isSignUp) ...[
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () => context.push('/forgot-password'),
+                              child: Text(
+                                'Forgot Password?',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ),
-                          const Expanded(
-                              child: Divider(color: AppColors.surfaceLight)),
                         ],
-                      ),
 
-                      const SizedBox(height: 16),
-
-                      // Google OAuth button (coming soon)
-                      Opacity(
-                        opacity: 0.6,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Google sign-in coming soon!'),
-                                backgroundColor: AppColors.primary,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.g_mobiledata, size: 24),
-                          label: Text(
-                            'Continue with Google (Coming Soon)',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                        // Confirm Password field (sign-up only)
+                        if (_isSignUp) ...[
+                          const SizedBox(height: 20),
+                          Text(
+                            'Confirm Password',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Please confirm your password';
+                              if (value != _passwordController.text) return 'Passwords do not match';
+                              return null;
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Re-enter your password',
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: AppColors.textMuted,
+                                size: 20,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: AppColors.textMuted,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  });
+                                },
+                              ),
+                              filled: true,
+                              fillColor: AppColors.surfaceLight,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 28),
+
+                        // Submit button
+                        GradientButton(
+                          title: _isLoading
+                              ? (_isSignUp ? 'Creating Account...' : 'Signing In...')
+                              : (_isSignUp ? 'Create Account' : 'Sign In'),
+                          disabled: _isLoading,
+                          onTap: _isLoading ? null : _onSubmit,
                         ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.surfaceLight),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+
+                        const SizedBox(height: 16),
+
+                        // Divider
+                        Row(
+                          children: [
+                            const Expanded(
+                                child: Divider(color: AppColors.surfaceLight)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'or',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ),
+                            const Expanded(
+                                child: Divider(color: AppColors.surfaceLight)),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Google OAuth button (coming soon)
+                        Opacity(
+                          opacity: 0.6,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Google sign-in coming soon!'),
+                                  backgroundColor: AppColors.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.g_mobiledata, size: 24),
+                            label: Text(
+                              'Continue with Google (Coming Soon)',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: const BorderSide(color: AppColors.surfaceLight),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 )
                     .animate()
@@ -592,13 +525,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildField({
+  Widget _buildFormField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     int? maxLength,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,12 +546,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLength: maxLength,
           maxLengthEnforcement: maxLength != null ? MaxLengthEnforcement.enforced : null,
           buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+          validator: validator,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),

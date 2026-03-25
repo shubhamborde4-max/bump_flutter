@@ -62,15 +62,21 @@ class BumpAvatar extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Text(
-        _initials,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: size * 0.38,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-      ),
+      child: _initials.isEmpty
+          ? Icon(
+              Icons.person,
+              color: Colors.white,
+              size: size * 0.5,
+            )
+          : Text(
+              _initials,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: size * 0.38,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
     );
   }
 }
