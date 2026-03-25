@@ -21,6 +21,10 @@ class AnalyticsData {
   final List<Prospect> allProspects;
   final List<Event> allEvents;
   final List<Nudge> allNudges;
+  final int quickCaptureCount;
+  final int partialContacts;
+  final int enrichedContacts;
+  final double captureRate;
 
   const AnalyticsData({
     required this.totalContacts,
@@ -35,6 +39,10 @@ class AnalyticsData {
     required this.allProspects,
     required this.allEvents,
     required this.allNudges,
+    required this.quickCaptureCount,
+    required this.partialContacts,
+    required this.enrichedContacts,
+    required this.captureRate,
   });
 }
 
@@ -113,6 +121,28 @@ final analyticsProvider = Provider<AnalyticsData>((ref) {
       .toList()
     ..sort((a, b) => b.nudgeCount.compareTo(a.nudgeCount));
 
+  // Quick Capture analytics
+  final quickCaptureCount = prospects
+      .where((p) => p.exchangeType == 'quick_capture')
+      .length;
+  final partialContacts = prospects.where((p) => p.isPartial).length;
+  final enrichedContacts = prospects
+      .where((p) => p.enrichmentStatus == 'enriched')
+      .length;
+
+  // Capture rate: quick captures with names / total NFC-method one-way shares
+  final nfcShares = prospects
+      .where((p) =>
+          p.exchangeMethod == ExchangeMethod.nfc ||
+          p.exchangeMethod == ExchangeMethod.quickCapture)
+      .length;
+  final quickCapturesWithName = prospects
+      .where(
+          (p) => p.exchangeType == 'quick_capture' && p.firstName.isNotEmpty)
+      .length;
+  final captureRate =
+      nfcShares > 0 ? quickCapturesWithName / nfcShares : 0.0;
+
   return AnalyticsData(
     totalContacts: totalContacts,
     totalEvents: totalEvents,
@@ -126,5 +156,9 @@ final analyticsProvider = Provider<AnalyticsData>((ref) {
     allProspects: prospects,
     allEvents: events,
     allNudges: nudges,
+    quickCaptureCount: quickCaptureCount,
+    partialContacts: partialContacts,
+    enrichedContacts: enrichedContacts,
+    captureRate: captureRate,
   );
 });

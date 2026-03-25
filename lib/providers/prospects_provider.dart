@@ -101,6 +101,53 @@ class ProspectsNotifier extends AsyncNotifier<List<Prospect>> {
     state = AsyncData([created, ...current]);
   }
 
+  Future<Prospect> addQuickCaptureProspect({
+    required String firstName,
+    String lastName = '',
+    String company = '',
+    String title = '',
+    String notes = '',
+    String eventId = '',
+    List<String> tags = const [],
+  }) async {
+    // Calculate missing fields
+    final missing = <String>[];
+    if (firstName.isEmpty) missing.add('name');
+    if (company.isEmpty) missing.add('company');
+    if (title.isEmpty) missing.add('title');
+    missing.add('phone');
+    missing.add('email');
+    missing.add('linkedIn');
+
+    final enrichment = firstName.isNotEmpty ? 'partial' : 'partial';
+
+    final prospect = Prospect(
+      id: '', // Will be assigned by Supabase
+      firstName: firstName,
+      lastName: lastName,
+      email: '',
+      phone: '',
+      company: company,
+      title: title,
+      eventId: eventId,
+      notes: notes,
+      tags: tags,
+      exchangeMethod: ExchangeMethod.quickCapture,
+      exchangeTime: DateTime.now(),
+      exchangeType: 'quick_capture',
+      enrichmentStatus: enrichment,
+      missingFields: missing,
+      exchangeDirection: 'outbound',
+    );
+
+    final repo = ref.read(prospectsRepositoryProvider);
+    final created = await repo.createProspect(prospect);
+
+    final current = state.valueOrNull ?? [];
+    state = AsyncData([created, ...current]);
+    return created;
+  }
+
   Future<void> deleteProspect(String id) async {
     final previous = state;
     final current = state.valueOrNull ?? [];

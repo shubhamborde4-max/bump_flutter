@@ -1,6 +1,6 @@
 enum ProspectStatus { newProspect, contacted, interested, converted, archived }
 
-enum ExchangeMethod { bump, qr, nfc, link }
+enum ExchangeMethod { bump, qr, nfc, link, quickCapture }
 
 extension ProspectStatusX on ProspectStatus {
   String get label {
@@ -62,6 +62,8 @@ extension ExchangeMethodX on ExchangeMethod {
         return 'nfc';
       case ExchangeMethod.link:
         return 'link';
+      case ExchangeMethod.quickCapture:
+        return 'quick_capture';
     }
   }
 
@@ -75,6 +77,8 @@ extension ExchangeMethodX on ExchangeMethod {
         return 'NFC';
       case ExchangeMethod.link:
         return 'Link';
+      case ExchangeMethod.quickCapture:
+        return 'Quick Capture';
     }
   }
 
@@ -88,6 +92,8 @@ extension ExchangeMethodX on ExchangeMethod {
         return ExchangeMethod.nfc;
       case 'link':
         return ExchangeMethod.link;
+      case 'quick_capture':
+        return ExchangeMethod.quickCapture;
       default:
         return ExchangeMethod.bump;
     }
@@ -112,6 +118,10 @@ class Prospect {
   final DateTime exchangeTime;
   final String? linkedIn;
   final List<String> tags;
+  final String exchangeType;
+  final String enrichmentStatus;
+  final List<String> missingFields;
+  final String exchangeDirection;
 
   const Prospect({
     required this.id,
@@ -131,6 +141,10 @@ class Prospect {
     required this.exchangeTime,
     this.linkedIn,
     this.tags = const [],
+    this.exchangeType = 'mutual_bump',
+    this.enrichmentStatus = 'complete',
+    this.missingFields = const [],
+    this.exchangeDirection = 'mutual',
   });
 
   String get fullName => '$firstName $lastName';
@@ -138,6 +152,20 @@ class Prospect {
   String get initials =>
       '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
           .toUpperCase();
+
+  bool get isPartial => enrichmentStatus != 'complete';
+
+  double get completenessScore {
+    int total = 6; // name, company, title, phone, email, linkedIn
+    int filled = 0;
+    if (firstName.isNotEmpty) filled++;
+    if (company.isNotEmpty) filled++;
+    if (title.isNotEmpty) filled++;
+    if (phone.isNotEmpty) filled++;
+    if (email.isNotEmpty) filled++;
+    if (linkedIn != null && linkedIn!.isNotEmpty) filled++;
+    return filled / total;
+  }
 
   Prospect copyWith({
     String? id,
@@ -157,6 +185,10 @@ class Prospect {
     DateTime? exchangeTime,
     String? linkedIn,
     List<String>? tags,
+    String? exchangeType,
+    String? enrichmentStatus,
+    List<String>? missingFields,
+    String? exchangeDirection,
   }) {
     return Prospect(
       id: id ?? this.id,
@@ -176,6 +208,10 @@ class Prospect {
       exchangeTime: exchangeTime ?? this.exchangeTime,
       linkedIn: linkedIn ?? this.linkedIn,
       tags: tags ?? this.tags,
+      exchangeType: exchangeType ?? this.exchangeType,
+      enrichmentStatus: enrichmentStatus ?? this.enrichmentStatus,
+      missingFields: missingFields ?? this.missingFields,
+      exchangeDirection: exchangeDirection ?? this.exchangeDirection,
     );
   }
 
@@ -199,6 +235,10 @@ class Prospect {
       'exchange_method': exchangeMethod.label,
       'exchange_time': exchangeTime.toIso8601String(),
       'tags': tags,
+      'exchange_type': exchangeType,
+      'enrichment_status': enrichmentStatus,
+      'missing_fields': missingFields,
+      'exchange_direction': exchangeDirection,
     };
   }
 
@@ -228,6 +268,13 @@ class Prospect {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      exchangeType: json['exchange_type'] as String? ?? 'mutual_bump',
+      enrichmentStatus: json['enrichment_status'] as String? ?? 'complete',
+      missingFields: (json['missing_fields'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      exchangeDirection: json['exchange_direction'] as String? ?? 'mutual',
     );
   }
 }

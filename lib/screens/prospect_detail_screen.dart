@@ -97,6 +97,7 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
   final _notesController = TextEditingController();
   bool _editingNotes = false;
   Timer? _debounceTimer;
+  String? _inlineEditField;
 
   // BUG-008: Phone number validation helper
   bool _isValidPhone(String phone) {
@@ -242,12 +243,73 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            _buildStatusBadge(status),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStatusBadge(status),
+                                if (prospect.isPartial) ...[
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      value: prospect.completenessScore,
+                                      strokeWidth: 3,
+                                      color: prospect.completenessScore < 0.5
+                                          ? Colors.orange
+                                          : prospect.completenessScore < 0.9
+                                              ? _primary
+                                              : _success,
+                                      backgroundColor: _surfaceLight,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                             const SizedBox(height: 24),
                           ],
                         ),
                       ),
                     ),
+
+                    // Partial contact banner
+                    if (prospect.isPartial)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: GestureDetector(
+                          onTap: () {
+                            // Scroll to missing fields
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _surfaceLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: const Border(
+                                left: BorderSide(
+                                    color: Colors.orange, width: 3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Partial contact \u2014 add details to complete',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: _textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(LucideIcons.arrowRight,
+                                    size: 16, color: _textMuted),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
 
                     // Contact action buttons
                     Padding(
@@ -368,6 +430,88 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
                                   label: 'Email',
                                   value: prospect.email,
                                   copyable: true,
+                                ),
+                              // Ghost rows for empty fields
+                              if (prospect.phone.isEmpty)
+                                _GhostFieldRow(
+                                  icon: LucideIcons.phone,
+                                  label: 'Add phone number',
+                                  isEditing: _inlineEditField == 'phone',
+                                  onTap: () => setState(() =>
+                                      _inlineEditField = 'phone'),
+                                  onSave: (value) {
+                                    ref
+                                        .read(prospectsProvider.notifier)
+                                        .updateProspect(
+                                          prospect.copyWith(
+                                            phone: value,
+                                            enrichmentStatus:
+                                                _recalcEnrichment(
+                                              prospect.copyWith(
+                                                  phone: value),
+                                            ),
+                                          ),
+                                        );
+                                    setState(
+                                        () => _inlineEditField = null);
+                                  },
+                                  onCancel: () => setState(
+                                      () => _inlineEditField = null),
+                                ),
+                              if (prospect.email.isEmpty)
+                                _GhostFieldRow(
+                                  icon: LucideIcons.mail,
+                                  label: 'Add email address',
+                                  isEditing: _inlineEditField == 'email',
+                                  onTap: () => setState(() =>
+                                      _inlineEditField = 'email'),
+                                  onSave: (value) {
+                                    ref
+                                        .read(prospectsProvider.notifier)
+                                        .updateProspect(
+                                          prospect.copyWith(
+                                            email: value,
+                                            enrichmentStatus:
+                                                _recalcEnrichment(
+                                              prospect.copyWith(
+                                                  email: value),
+                                            ),
+                                          ),
+                                        );
+                                    setState(
+                                        () => _inlineEditField = null);
+                                  },
+                                  onCancel: () => setState(
+                                      () => _inlineEditField = null),
+                                ),
+                              if ((prospect.linkedIn == null ||
+                                      prospect.linkedIn!.isEmpty) &&
+                                  prospect.isPartial)
+                                _GhostFieldRow(
+                                  icon: LucideIcons.link2,
+                                  label: 'Add LinkedIn URL',
+                                  isEditing:
+                                      _inlineEditField == 'linkedin',
+                                  onTap: () => setState(() =>
+                                      _inlineEditField = 'linkedin'),
+                                  onSave: (value) {
+                                    ref
+                                        .read(prospectsProvider.notifier)
+                                        .updateProspect(
+                                          prospect.copyWith(
+                                            linkedIn: value,
+                                            enrichmentStatus:
+                                                _recalcEnrichment(
+                                              prospect.copyWith(
+                                                  linkedIn: value),
+                                            ),
+                                          ),
+                                        );
+                                    setState(
+                                        () => _inlineEditField = null);
+                                  },
+                                  onCancel: () => setState(
+                                      () => _inlineEditField = null),
                                 ),
                             ],
                           ),
@@ -679,6 +823,18 @@ class _ProspectDetailScreenState extends ConsumerState<ProspectDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _recalcEnrichment(Prospect p) {
+    if (p.firstName.isNotEmpty &&
+        p.company.isNotEmpty &&
+        p.phone.isNotEmpty &&
+        p.email.isNotEmpty &&
+        (p.linkedIn != null && p.linkedIn!.isNotEmpty)) {
+      return 'complete';
+    }
+    if (p.completenessScore > 0.5) return 'enriched';
+    return 'partial';
   }
 
   Widget _buildNoNudges(Prospect prospect) {
@@ -1020,6 +1176,115 @@ class _GradientButton extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Ghost Field Row (for missing fields in partial contacts) ─────────────
+class _GhostFieldRow extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isEditing;
+  final VoidCallback onTap;
+  final ValueChanged<String> onSave;
+  final VoidCallback onCancel;
+
+  const _GhostFieldRow({
+    required this.icon,
+    required this.label,
+    required this.isEditing,
+    required this.onTap,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  @override
+  State<_GhostFieldRow> createState() => _GhostFieldRowState();
+}
+
+class _GhostFieldRowState extends State<_GhostFieldRow> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isEditing) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0x0A000000))),
+        ),
+        child: Row(
+          children: [
+            Icon(widget.icon, size: 16, color: _primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                style: GoogleFonts.inter(fontSize: 14, color: _textPrimary),
+                cursorColor: _primary,
+                decoration: InputDecoration(
+                  hintText: widget.label,
+                  hintStyle:
+                      GoogleFonts.inter(fontSize: 14, color: _textMuted),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                ),
+                onSubmitted: (v) {
+                  if (v.trim().isNotEmpty) widget.onSave(v.trim());
+                },
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                if (_controller.text.trim().isNotEmpty) {
+                  widget.onSave(_controller.text.trim());
+                }
+              },
+              child: const Icon(LucideIcons.check, size: 16, color: _primary),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: widget.onCancel,
+              child: const Icon(LucideIcons.x, size: 16, color: _textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0x0A000000))),
+        ),
+        child: Row(
+          children: [
+            Icon(widget.icon, size: 16, color: _textMuted.withValues(alpha: 0.5)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: _textMuted,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            const Icon(LucideIcons.plus, size: 14, color: _primary),
           ],
         ),
       ),

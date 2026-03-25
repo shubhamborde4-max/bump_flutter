@@ -17,6 +17,7 @@ import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/widgets/avatar.dart';
 import 'package:bump/widgets/glass_card.dart';
 import 'package:bump/widgets/qr_display_widget.dart';
+import 'package:bump/widgets/quick_capture_sheet.dart';
 import 'package:bump/services/contact_service.dart';
 
 /// The possible states of the NFC bump tab.
@@ -38,6 +39,11 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
 
   /// Holds the exchanged contact info after a successful NFC exchange.
   Map<String, dynamic>? _exchangeResult;
+
+  /// Quick Capture queue for rapid sharing
+  final List<Map<String, dynamic>> _quickCaptureQueue = [];
+  bool _isShowingQuickCapture = false;
+  int _consecutiveSkips = 0;
 
   @override
   void initState() {
@@ -138,8 +144,11 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
         if (otherUserId != null && otherUserId.isNotEmpty) {
           await _performExchange(otherUserId, eventId);
         } else {
-          // We wrote our URL but didn't receive one — restart listening.
-          if (mounted) _startNfcSession();
+          // One-way share — trigger Quick Capture
+          if (mounted) {
+            _enqueueQuickCapture(eventId);
+            _startNfcSession();
+          }
         }
       },
       onError: (error) async {
@@ -187,6 +196,41 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
       );
       // Resume listening.
       _startNfcSession();
+    }
+  }
+
+  void _enqueueQuickCapture(String eventId) {
+    final activeEvent = ref.read(activeEventProvider);
+    _quickCaptureQueue.add({
+      'eventId': activeEvent?.id ?? eventId,
+      'eventName': activeEvent?.name,
+      'timestamp': DateTime.now(),
+    });
+    _processQuickCaptureQueue();
+  }
+
+  Future<void> _processQuickCaptureQueue() async {
+    if (_isShowingQuickCapture || _quickCaptureQueue.isEmpty || !mounted) return;
+    _isShowingQuickCapture = true;
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) {
+      _isShowingQuickCapture = false;
+      return;
+    }
+
+    final item = _quickCaptureQueue.removeAt(0);
+    await showQuickCaptureSheet(
+      context,
+      ref,
+      eventId: item['eventId'] as String?,
+      eventName: item['eventName'] as String?,
+    );
+
+    _isShowingQuickCapture = false;
+    // Process next in queue
+    if (mounted && _quickCaptureQueue.isNotEmpty) {
+      _processQuickCaptureQueue();
     }
   }
 
@@ -1019,6 +1063,9 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
   Widget _buildExchangeRow(Prospect prospect) {
     final timeAgo = _formatTimeAgo(prospect.exchangeTime);
 
+    // Ghost exchange display
+    final isGhost = prospect.firstName.isEmpty && prospect.exchangeType == 'quick_capture';
+
     return GestureDetector(
       onTap: () => context.push('/prospects/${prospect.id}'),
       child: GlassCard(
@@ -1026,11 +1073,31 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            BumpAvatar(
-              firstName: prospect.firstName,
-              lastName: prospect.lastName,
-              uri: prospect.avatar,
-              size: 36,
+            Stack(
+              children: [
+                BumpAvatar(
+                  firstName: isGhost ? '?' : prospect.firstName,
+                  lastName: isGhost ? '' : prospect.lastName,
+                  uri: prospect.avatar,
+                  size: 36,
+                ),
+                if (prospect.isPartial)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: const Icon(LucideIcons.alertCircle,
+                          size: 8, color: Colors.white),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1038,15 +1105,17 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    prospect.fullName,
+                    isGhost
+                        ? 'NFC share at ${_formatTimeAgo(prospect.exchangeTime)}'
+                        : prospect.fullName,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: isGhost ? AppColors.textMuted : AppColors.textPrimary,
                     ),
                   ),
                   Text(
-                    prospect.company,
+                    isGhost ? 'No contact captured' : prospect.company,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: AppColors.textMuted,
@@ -1055,15 +1124,33 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
                 ],
               ),
             ),
-            Icon(LucideIcons.chevronRight, size: 16, color: AppColors.textMuted),
-            const SizedBox(width: 4),
-            Text(
-              timeAgo,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: AppColors.textMuted,
+            if (isGhost)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Add details',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              )
+            else ...[
+              Icon(LucideIcons.chevronRight, size: 16, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                timeAgo,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

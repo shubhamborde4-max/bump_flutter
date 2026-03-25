@@ -752,6 +752,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final gradientPair = AppGradients
         .avatarGradients[index % AppGradients.avatarGradients.length];
 
+    final isGhost = prospect.firstName.isEmpty &&
+        prospect.exchangeType == 'quick_capture';
+
     return GestureDetector(
       onTap: () => context.push('/prospects/${prospect.id}'),
       child: Container(
@@ -769,35 +772,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       child: Row(
         children: [
-          // Avatar with gradient and initials
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientPair,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: gradientPair[0].withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+          // Avatar with gradient and initials + partial badge
+          Stack(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isGhost
+                        ? [_surfaceContainerLow, _surfaceContainer]
+                        : gradientPair,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isGhost
+                              ? Colors.grey
+                              : gradientPair[0])
+                          .withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                prospect.initials,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                child: Center(
+                  child: isGhost
+                      ? Icon(LucideIcons.userPlus,
+                          size: 22, color: _onSurfaceVariant)
+                      : Text(
+                          prospect.initials,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
-            ),
+              if (prospect.isPartial && !isGhost)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Icon(LucideIcons.alertCircle,
+                        size: 8, color: Colors.white),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 20),
           // Name + role
@@ -806,16 +837,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  prospect.fullName,
+                  isGhost
+                      ? 'NFC share \u00B7 ${_timeAgo(prospect.exchangeTime)}'
+                      : prospect.fullName,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: _onSurface,
+                    color: isGhost ? _onSurfaceVariant : _onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${prospect.title} @ ${prospect.company}',
+                  isGhost
+                      ? 'No contact captured'
+                      : '${prospect.title} @ ${prospect.company}',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: _onSurfaceVariant,
@@ -824,26 +859,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          // Time + status
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _timeAgo(prospect.exchangeTime),
+          // Time + status or Add details
+          if (isGhost)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: _primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Add details',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  color: _primary,
                 ),
               ),
-              const SizedBox(height: 4),
-              Icon(
-                LucideIcons.checkCircle2,
-                size: 16,
-                color: _primary,
-              ),
-            ],
-          ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _timeAgo(prospect.exchangeTime),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Icon(
+                  prospect.isPartial
+                      ? LucideIcons.alertCircle
+                      : LucideIcons.checkCircle2,
+                  size: 16,
+                  color: prospect.isPartial ? Colors.orange : _primary,
+                ),
+              ],
+            ),
         ],
       ),
       ),

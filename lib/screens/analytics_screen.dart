@@ -526,6 +526,61 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         }).toList(),
                       ),
               ),
+              const SizedBox(height: 16),
+
+              // Capture Efficiency section
+              _buildSection(
+                title: 'Capture Efficiency',
+                delay: 700,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _CaptureStatTile(
+                            label: 'Quick Captures',
+                            value: '${analytics.quickCaptureCount}',
+                            icon: LucideIcons.edit3,
+                            color: _accent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _CaptureStatTile(
+                            label: 'Partial Contacts',
+                            value: '${analytics.partialContacts}',
+                            icon: LucideIcons.alertCircle,
+                            color: _warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _CaptureStatTile(
+                            label: 'Enriched',
+                            value: '${analytics.enrichedContacts}',
+                            icon: LucideIcons.checkCircle,
+                            color: _success,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _CaptureStatTile(
+                            label: 'Capture Rate',
+                            value:
+                                '${(analytics.captureRate * 100).toStringAsFixed(0)}%',
+                            icon: LucideIcons.target,
+                            color: _info,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -903,6 +958,58 @@ class _AnimatedBar extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Capture Stat Tile ───────────────────────────────────────────────────────
+class _CaptureStatTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _CaptureStatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _surfaceLight,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: _textSecondary,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
