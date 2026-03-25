@@ -19,6 +19,7 @@ import 'package:bump/widgets/glass_card.dart';
 import 'package:bump/widgets/qr_display_widget.dart';
 import 'package:bump/widgets/quick_capture_sheet.dart';
 import 'package:bump/services/contact_service.dart';
+import 'package:bump/services/nfc_hce_service.dart';
 
 /// The possible states of the NFC bump tab.
 enum _NfcState { checking, available, unavailable, exchangeSuccess }
@@ -49,12 +50,50 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
   void initState() {
     super.initState();
     _checkNfcAvailability();
+    _startHceService();
   }
 
   @override
   void dispose() {
     _stopNfcSession();
+    _stopHceService();
     super.dispose();
+  }
+
+  /// Start the HCE service so the phone acts as an NFC tag with the user's vCard.
+  Future<void> _startHceService() async {
+    try {
+      final supported = await NfcHceService.isSupported;
+      if (!supported) return;
+
+      final profile = ref.read(profileNotifierProvider).valueOrNull;
+      if (profile == null) return;
+
+      // Build and set the vCard
+      final vcf = NfcHceService.buildVCard(
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phone: profile.phone,
+        mobileNumber: profile.mobileNumber,
+        company: profile.company,
+        title: profile.title,
+        website: profile.website,
+        address: profile.address,
+        linkedIn: profile.linkedIn,
+        note: profile.note,
+      );
+      await NfcHceService.setVCard(vcf);
+      await NfcHceService.enable();
+    } catch (e) {
+      debugPrint('HCE start failed: $e');
+    }
+  }
+
+  Future<void> _stopHceService() async {
+    try {
+      await NfcHceService.disable();
+    } catch (_) {}
   }
 
   // ---------------------------------------------------------------------------
