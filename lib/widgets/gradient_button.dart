@@ -31,20 +31,22 @@ class GradientButton extends StatelessWidget {
       child: Container(
         width: double.infinity,
         height: height,
-        decoration: BoxDecoration(
-          gradient: disabled ? null : AppGradients.hero,
-          color: disabled ? AppColors.surfaceLight : null,
-          borderRadius: BorderRadius.circular(small ? 8 : 12),
-          boxShadow: disabled
-              ? null
-              : [
+        decoration: disabled
+            ? BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(small ? 8 : 12),
+              )
+            : BoxDecoration(
+                gradient: AppGradients.hero,
+                borderRadius: BorderRadius.circular(small ? 8 : 12),
+                boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
-        ),
+              ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,

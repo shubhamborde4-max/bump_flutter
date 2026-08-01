@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bump/core/theme/app_theme.dart';
-import 'package:bump/widgets/gradient_button.dart';
 
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -58,7 +57,17 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         password: password,
       );
 
-      // Sign out the user (actual account deletion requires server-side)
+      // Call the delete-account Edge Function to remove all user data
+      final session = supabase.auth.currentSession;
+      if (session != null) {
+        await supabase.functions.invoke(
+          'delete-account',
+          method: HttpMethod.post,
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        );
+      }
+
+      // Sign out after deletion
       await supabase.auth.signOut();
 
       if (mounted) {

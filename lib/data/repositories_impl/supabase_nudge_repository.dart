@@ -13,43 +13,49 @@ class SupabaseNudgeRepository
 
   @override
   Future<List<Nudge>> getNudges({String? prospectId}) async {
-    var query = client
-        .from('nudges')
-        .select()
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      var query = client
+          .from('nudges')
+          .select()
+          .eq('user_id', currentUserId);
 
-    if (prospectId != null) {
-      query = query.eq('prospect_id', prospectId);
-    }
+      if (prospectId != null) {
+        query = query.eq('prospect_id', prospectId);
+      }
 
-    final response = await query.order('sent_at', ascending: false);
+      final response = await query.order('sent_at', ascending: false);
 
-    return safeListCast(response)
-        .map((json) => Nudge.fromJson(json))
-        .toList();
+      return safeListCast(response)
+          .map((json) => Nudge.fromJson(json))
+          .toList();
+    });
   }
 
   @override
   Future<Nudge> createNudge(Nudge nudge) async {
-    final data = nudge.toJson();
-    data['user_id'] = currentUserId;
-    data.remove('id');
+    return safeCall(() async {
+      final data = nudge.toJson();
+      data['user_id'] = currentUserId;
+      data.remove('id');
 
-    final response = await client
-        .from('nudges')
-        .insert(data)
-        .select()
-        .single();
+      final response = await client
+          .from('nudges')
+          .insert(data)
+          .select()
+          .single();
 
-    return Nudge.fromJson(response);
+      return Nudge.fromJson(response);
+    });
   }
 
   @override
   Future<void> updateNudgeStatus(String id, String status) async {
-    await client
-        .from('nudges')
-        .update({'status': status})
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      await client
+          .from('nudges')
+          .update({'status': status})
+          .eq('id', id)
+          .eq('user_id', currentUserId);
+    });
   }
 }

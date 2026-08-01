@@ -15,26 +15,28 @@ import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/data/models/nudge_model.dart';
 import 'package:bump/services/export_service.dart';
 
-// ── Colors ──────────────────────────────────────────────────────────────────
-const _primary = Color(0xFF5341CD);
-const _accent = Color(0xFF6C5CE7);
-const _background = Color(0xFFF8F9FE);
-const _surface = Color(0xFFFFFFFF);
-const _surfaceLight = Color(0xFFF2F3F8);
-const _textPrimary = Color(0xFF191C1F);
-const _textSecondary = Color(0xFF474554);
-const _textMuted = Color(0xFF787586);
-const _success = Color(0xFF00C853);
-const _warning = Color(0xFFFF9100);
-const _info = Color(0xFF0091EA);
-const _whatsapp = Color(0xFF25D366);
-const _heroGradient = [Color(0xFF6C5CE7), Color(0xFF00D2FF)];
+import 'package:bump/core/theme/app_theme.dart';
+
+// ── Colors (mapped to AppColors) ────────────────────────────────────────────
+const _primary = AppColors.primary;
+const _accent = AppColors.accent;
+const _background = AppColors.background;
+const _surface = AppColors.surface;
+const _surfaceLight = AppColors.surfaceLight;
+const _textPrimary = AppColors.textPrimary;
+const _textSecondary = AppColors.textSecondary;
+const _textMuted = AppColors.textMuted;
+const _success = AppColors.success;
+const _warning = AppColors.warning;
+const _info = AppColors.info;
+const _whatsapp = AppColors.whatsapp;
+final _heroGradient = AppGradients.hero.colors;
 
 const _statusColors = {
-  'new': Color(0xFF00677F),
-  'contacted': Color(0xFFFF9100),
-  'interested': Color(0xFFE65100),
-  'converted': Color(0xFF00C853),
+  'new': AppColors.statusNew,
+  'contacted': AppColors.statusContacted,
+  'interested': AppColors.statusInterested,
+  'converted': AppColors.statusConverted,
 };
 
 const _statusLabels = {
@@ -44,21 +46,13 @@ const _statusLabels = {
   'converted': 'Converted',
 };
 
-const _avatarGradients = [
-  [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
-  [Color(0xFF00D2FF), Color(0xFF448AFF)],
-  [Color(0xFFFF5252), Color(0xFFFF7675)],
-  [Color(0xFF00E676), Color(0xFF69F0AE)],
-  [Color(0xFFFFAB40), Color(0xFFFFD740)],
-  [Color(0xFFE040FB), Color(0xFFEA80FC)],
-];
-
 List<Color> _getAvatarGradient(String name) {
+  final gradients = AppGradients.avatarGradients;
   int hash = 0;
   for (int i = 0; i < name.length; i++) {
     hash = name.codeUnitAt(i) + ((hash << 5) - hash);
   }
-  return _avatarGradients[hash.abs() % _avatarGradients.length];
+  return gradients[hash.abs() % gradients.length];
 }
 
 String _getInitials(String? first, String? last) {
@@ -948,7 +942,7 @@ class _AnimatedBar extends StatelessWidget {
                   fraction.clamp(0.02, 1.0),
               height: 24,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: _heroGradient,
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,

@@ -6,32 +6,28 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:bump/core/theme/app_theme.dart';
 import 'package:bump/widgets/gradient_button.dart';
 
-class EmptyState extends StatelessWidget {
+/// Reusable error state widget displayed when a screen fails to load data.
+///
+/// Shows a friendly error message with an optional retry button.
+/// Designed to match [EmptyState] in visual style.
+class ErrorState extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final String? actionLabel;
-  final VoidCallback? onAction;
+  final VoidCallback? onRetry;
 
-  const EmptyState({
+  const ErrorState({
     super.key,
-    this.title = 'No records found',
-    this.subtitle = 'There are no records as of now.\nPlease come back later or create a new one.',
-    this.icon = LucideIcons.inbox,
-    this.actionLabel,
-    this.onAction,
+    this.title = 'Something went wrong',
+    this.subtitle = 'Please check your connection\nand try again.',
+    this.icon = LucideIcons.wifiOff,
+    this.onRetry,
   });
-
-  // Design tokens (mapped to AppColors)
-  static const _background = AppColors.background;
-  static const _textPrimary = AppColors.textPrimary;
-  static const _textMuted = AppColors.textMuted;
-  static const _surfaceLight = AppColors.surfaceLight;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _background,
+      color: AppColors.background,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Column(
@@ -42,14 +38,14 @@ class EmptyState extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _surfaceLight,
+              color: const Color(0xFFFFF3F0),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Center(
               child: Icon(
                 icon,
                 size: 40,
-                color: _textMuted,
+                color: Colors.red.shade400,
               ),
             ),
           )
@@ -58,8 +54,8 @@ class EmptyState extends StatelessWidget {
               )
               .moveY(
                 begin: 0,
-                end: -8,
-                duration: 2000.ms,
+                end: -6,
+                duration: 2500.ms,
                 curve: Curves.easeInOut,
               ),
 
@@ -71,7 +67,7 @@ class EmptyState extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: _textPrimary,
+              color: AppColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -83,19 +79,19 @@ class EmptyState extends StatelessWidget {
             subtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: _textMuted,
+              color: AppColors.textMuted,
             ),
             textAlign: TextAlign.center,
           ),
 
-          // Optional action button
-          if (actionLabel != null && onAction != null) ...[
+          // Retry button
+          if (onRetry != null) ...[
             const SizedBox(height: 24),
             SizedBox(
               width: 200,
               child: GradientButton(
-                title: actionLabel!,
-                onTap: onAction,
+                title: 'Try Again',
+                onTap: onRetry,
               ),
             ),
           ],

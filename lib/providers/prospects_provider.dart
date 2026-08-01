@@ -52,6 +52,13 @@ class ProspectsNotifier extends AsyncNotifier<List<Prospect>> {
     }
   }
 
+  Future<void> updateProspectNotes(String id, String notes) async {
+    final current = state.valueOrNull ?? [];
+    final prospect = current.where((p) => p.id == id).firstOrNull;
+    if (prospect == null) return;
+    await updateProspect(prospect.copyWith(notes: notes));
+  }
+
   Future<void> updateProspect(Prospect prospect) async {
     final previous = state;
     final current = state.valueOrNull ?? [];

@@ -25,16 +25,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // ── Design tokens ──────────────────────────────────────────────────────
-  static const Color _primary = Color(0xFF5341CD);
-  static const Color _primaryContainer = Color(0xFF6C5CE7);
-  static const Color _secondary = Color(0xFF00677F);
-  static const Color _background = Color(0xFFF8F9FE);
-  static const Color _surfaceContainerLow = Color(0xFFF2F3F8);
-  static const Color _surfaceContainer = Color(0xFFECEEF3);
-  static const Color _onSurface = Color(0xFF191C1F);
-  static const Color _onSurfaceVariant = Color(0xFF474554);
-  static const Color _outlineVariant = Color(0xFFC8C4D7);
+  // ── Design tokens (mapped to AppColors) ──────────────────────────────
+  static const Color _primary = AppColors.primary;
+  static const Color _primaryContainer = AppColors.accent;
+  static const Color _secondary = AppColors.statusNew;
+  static const Color _background = AppColors.background;
+  static const Color _surfaceContainerLow = AppColors.surfaceLight;
+  static const Color _surfaceContainer = AppColors.surfaceMedium;
+  static const Color _onSurface = AppColors.textPrimary;
+  static const Color _onSurfaceVariant = AppColors.textSecondary;
+  static const Color _outlineVariant = AppColors.outlineVariant;
 
   String _timeAgo(DateTime time) {
     final now = DateTime.now();
@@ -722,15 +722,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 24),
         if (prospects.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Text(
-                'No exchanges yet. Start bumping!',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: _onSurfaceVariant,
-                ),
+          GestureDetector(
+            onTap: () => context.go('/bump'),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppGradients.hero,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      LucideIcons.zap,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Try your first Bump!',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to exchange contacts via NFC or QR code',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    LucideIcons.arrowRight,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ],
               ),
             ),
           )

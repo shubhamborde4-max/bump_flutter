@@ -13,65 +13,76 @@ class SupabaseEventRepository
 
   @override
   Future<List<Event>> getEvents() async {
-    final response = await client
-        .from('events')
-        .select()
-        .eq('user_id', currentUserId)
-        .order('date', ascending: false);
+    return safeCall(() async {
+      final response = await client
+          .from('events')
+          .select()
+          .eq('user_id', currentUserId)
+          .order('date', ascending: false);
 
-    return safeListCast(response)
-        .map((json) => Event.fromJson(json))
-        .toList();
+      return safeListCast(response)
+          .map((json) => Event.fromJson(json))
+          .toList();
+    });
   }
 
   @override
   Future<Event?> getEvent(String id) async {
-    final response = await client
-        .from('events')
-        .select()
-        .eq('id', id)
-        .eq('user_id', currentUserId)
-        .maybeSingle();
+    return safeCall(() async {
+      final response = await client
+          .from('events')
+          .select()
+          .eq('id', id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
 
-    if (response == null) return null;
-    return Event.fromJson(response);
+      if (response == null) return null;
+      return Event.fromJson(response);
+    });
   }
 
   @override
   Future<Event> createEvent(Event event) async {
-    final data = event.toJson();
-    data['user_id'] = currentUserId;
-    data.remove('id'); // Let Supabase generate the id
+    return safeCall(() async {
+      final data = event.toJson();
+      data['user_id'] = currentUserId;
+      data.remove('id');
 
-    final response = await client
-        .from('events')
-        .insert(data)
-        .select()
-        .single();
+      final response = await client
+          .from('events')
+          .insert(data)
+          .select()
+          .single();
 
-    return Event.fromJson(response);
+      return Event.fromJson(response);
+    });
   }
 
   @override
   Future<void> updateEvent(Event event) async {
-    final data = event.toJson();
-    data.remove('id');
-    data.remove('user_id');
+    return safeCall(() async {
+      final data = event.toJson();
+      data.remove('id');
+      data.remove('user_id');
 
-    await client.from('events').update(data).eq('id', event.id);
+      await client.from('events').update(data).eq('id', event.id);
+    });
   }
 
   @override
   Future<void> deleteEvent(String id) async {
-    await client.from('events').delete().eq('id', id).eq('user_id', currentUserId);
+    return safeCall(() async {
+      await client.from('events').delete().eq('id', id).eq('user_id', currentUserId);
+    });
   }
 
   @override
   Future<void> setActiveEvent(String id) async {
-    // Atomic: deactivate all then activate target in a single RPC call
-    await client.rpc('set_active_event', params: {
-      'p_user_id': currentUserId,
-      'p_event_id': id,
+    return safeCall(() async {
+      await client.rpc('set_active_event', params: {
+        'p_user_id': currentUserId,
+        'p_event_id': id,
+      });
     });
   }
 }

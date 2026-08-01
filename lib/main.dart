@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,32 +26,29 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // BUG-025: Global error handler for crash reporting
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    // TODO: Send to Firebase Crashlytics when integrated
-  };
-
   // Initialise Supabase
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Initialise Firebase & FCM (wrapped in try-catch so the app works
-  // even without google-services.json or Google Play Services)
+  // Initialise Firebase, Crashlytics & FCM (wrapped in try-catch so the
+  // app works even without google-services.json or Google Play Services)
   try {
     await Firebase.initializeApp();
+    // BUG-025: Wire crash reports to Crashlytics (must be after Firebase.initializeApp)
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
     await NotificationService.initialize();
   } catch (e) {
-    debugPrint('Firebase init failed (FCM disabled): $e');
+    debugPrint('Firebase init failed (Crashlytics/FCM disabled): $e');
   }
 
   // Set system UI overlay style for light theme
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.white,
+    systemNavigationBarColor: Color(0xFFFFFFFF),
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 

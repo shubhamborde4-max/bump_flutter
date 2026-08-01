@@ -702,19 +702,19 @@ class _GradientButton extends StatelessWidget {
       child: Container(
         height: 56,
         width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: disabled
-              ? null
-              : const LinearGradient(
+        decoration: disabled
+            ? BoxDecoration(
+                color: _surfaceLight,
+                borderRadius: BorderRadius.circular(14),
+              )
+            : BoxDecoration(
+                gradient: const LinearGradient(
                   colors: _heroGradient,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-          color: disabled ? _surfaceLight : null,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: disabled
-              ? null
-              : [
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF6C5CE7)
                         .withValues(alpha: 0.3),
@@ -722,7 +722,7 @@ class _GradientButton extends StatelessWidget {
                     offset: const Offset(0, 4),
                   ),
                 ],
-        ),
+              ),
         alignment: Alignment.center,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

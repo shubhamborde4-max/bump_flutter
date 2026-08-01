@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-// ── Design Tokens ───────────────────────────────────────────────────────────
-const _primary = Color(0xFF5341CD);
-const _background = Color(0xFFF8F9FE);
-const _surface = Color(0xFFFFFFFF);
-const _textPrimary = Color(0xFF191C1F);
-const _textSecondary = Color(0xFF474554);
+import 'package:bump/core/theme/app_theme.dart';
+
+// ── Design Tokens (mapped to AppColors) ─────────────────────────────────────
+const _primary = AppColors.primary;
+const _background = AppColors.background;
+const _surface = AppColors.surface;
+const _textPrimary = AppColors.textPrimary;
+const _textSecondary = AppColors.textSecondary;
 
 class PrivacyPolicyScreen extends ConsumerWidget {
   const PrivacyPolicyScreen({super.key});

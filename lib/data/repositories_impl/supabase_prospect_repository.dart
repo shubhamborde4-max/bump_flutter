@@ -13,92 +13,106 @@ class SupabaseProspectRepository
 
   @override
   Future<List<Prospect>> getProspects({String? eventId, String? status}) async {
-    var query = client
-        .from('prospects')
-        .select()
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      var query = client
+          .from('prospects')
+          .select()
+          .eq('user_id', currentUserId);
 
-    if (eventId != null) {
-      query = query.eq('event_id', eventId);
-    }
-    if (status != null) {
-      query = query.eq('status', status);
-    }
+      if (eventId != null) {
+        query = query.eq('event_id', eventId);
+      }
+      if (status != null) {
+        query = query.eq('status', status);
+      }
 
-    final response = await query.order('exchange_time', ascending: false);
+      final response = await query.order('exchange_time', ascending: false);
 
-    return safeListCast(response)
-        .map((json) => Prospect.fromJson(json))
-        .toList();
+      return safeListCast(response)
+          .map((json) => Prospect.fromJson(json))
+          .toList();
+    });
   }
 
   @override
   Future<Prospect?> getProspect(String id) async {
-    final response = await client
-        .from('prospects')
-        .select()
-        .eq('id', id)
-        .eq('user_id', currentUserId)
-        .maybeSingle();
+    return safeCall(() async {
+      final response = await client
+          .from('prospects')
+          .select()
+          .eq('id', id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
 
-    if (response == null) return null;
-    return Prospect.fromJson(response);
+      if (response == null) return null;
+      return Prospect.fromJson(response);
+    });
   }
 
   @override
   Future<Prospect> createProspect(Prospect prospect) async {
-    final data = prospect.toJson();
-    data['user_id'] = currentUserId;
-    data.remove('id');
+    return safeCall(() async {
+      final data = prospect.toJson();
+      data['user_id'] = currentUserId;
+      data.remove('id');
 
-    final response = await client
-        .from('prospects')
-        .insert(data)
-        .select()
-        .single();
+      final response = await client
+          .from('prospects')
+          .insert(data)
+          .select()
+          .single();
 
-    return Prospect.fromJson(response);
+      return Prospect.fromJson(response);
+    });
   }
 
   @override
   Future<void> updateProspect(Prospect prospect) async {
-    final data = prospect.toJson();
-    data.remove('id');
-    data.remove('user_id');
+    return safeCall(() async {
+      final data = prospect.toJson();
+      data.remove('id');
+      data.remove('user_id');
 
-    await client.from('prospects').update(data).eq('id', prospect.id);
+      await client.from('prospects').update(data).eq('id', prospect.id);
+    });
   }
 
   @override
   Future<void> updateProspectStatus(String id, String status) async {
-    await client
-        .from('prospects')
-        .update({'status': status})
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      await client
+          .from('prospects')
+          .update({'status': status})
+          .eq('id', id)
+          .eq('user_id', currentUserId);
+    });
   }
 
   @override
   Future<void> deleteProspect(String id) async {
-    await client
-        .from('prospects')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      await client
+          .from('prospects')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', currentUserId);
+    });
   }
 
   @override
   Future<int> getProspectCount({String? eventId}) async {
-    var query = client
-        .from('prospects')
-        .select()
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      var query = client
+          .from('prospects')
+          .select()
+          .eq('user_id', currentUserId);
 
-    if (eventId != null) {
-      query = query.eq('event_id', eventId);
-    }
+      if (eventId != null) {
+        query = query.eq('event_id', eventId);
+      }
 
-    final response = await query;
-    return safeListCast(response).length;
+      final response = await query;
+      return safeListCast(response).length;
+    });
   }
 }

@@ -16,22 +16,26 @@ class SupabaseExchangeRepository
     required String method,
     String? eventId,
   }) async {
-    final response = await client.rpc('handle_exchange', params: {
-      'p_initiator_id': currentUserId,
-      'p_receiver_id': receiverId,
-      'p_method': method,
-      'p_event_id': eventId,
-    });
+    return safeCall(() async {
+      final response = await client.rpc('handle_exchange', params: {
+        'p_initiator_id': currentUserId,
+        'p_receiver_id': receiverId,
+        'p_method': method,
+        'p_event_id': eventId,
+      });
 
-    return safeMapCast(response) ?? <String, dynamic>{};
+      return safeMapCast(response) ?? <String, dynamic>{};
+    });
   }
 
   @override
   Future<Map<String, dynamic>?> getProfileByUsername(String username) async {
-    final response = await client.rpc('get_profile_by_username', params: {
-      'p_username': username.toLowerCase(),
-    });
+    return safeCall(() async {
+      final response = await client.rpc('get_profile_by_username', params: {
+        'p_username': username.toLowerCase(),
+      });
 
-    return safeMapCast(response);
+      return safeMapCast(response);
+    });
   }
 }

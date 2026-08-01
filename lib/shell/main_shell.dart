@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// ── Design Tokens ───────────────────────────────────────────────────────────
-const _primaryContainer = Color(0xFF6C5CE7);
+import 'package:bump/core/theme/app_theme.dart';
+
+// ── Design Tokens (mapped to AppColors) ─────────────────────────────────────
+const _primaryContainer = AppColors.accent;
 const _inactiveColor = Color(0xFF94A3B8); // slate-400
 
 class MainShell extends StatelessWidget {
@@ -120,7 +122,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      label: label,
+      button: true,
+      selected: isActive,
+      child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
@@ -160,6 +166,7 @@ class _NavItem extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

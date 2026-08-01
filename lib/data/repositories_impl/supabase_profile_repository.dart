@@ -16,14 +16,16 @@ class SupabaseProfileRepository
 
   @override
   Future<User?> getProfile(String userId) async {
-    final response = await client
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
+    return safeCall(() async {
+      final response = await client
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
 
-    if (response == null) return null;
-    return User.fromJson(response);
+      if (response == null) return null;
+      return User.fromJson(response);
+    });
   }
 
   @override
@@ -35,50 +37,58 @@ class SupabaseProfileRepository
 
   @override
   Future<void> createProfile(User user) async {
-    await client.from('profiles').insert(user.toJson());
+    return safeCall(() async {
+      await client.from('profiles').insert(user.toJson());
+    });
   }
 
   @override
   Future<void> updateProfile(User user) async {
-    final data = user.toJson();
-    data.remove('id'); // Don't include id in update payload
-    await client.from('profiles').update(data).eq('id', user.id);
+    return safeCall(() async {
+      final data = user.toJson();
+      data.remove('id');
+      await client.from('profiles').update(data).eq('id', user.id);
+    });
   }
 
   @override
   Future<bool> isUsernameAvailable(String username) async {
-    final userId = client.auth.currentUser?.id;
-    var query = client
-        .from('profiles')
-        .select('id')
-        .eq('username', username.toLowerCase());
+    return safeCall(() async {
+      final userId = client.auth.currentUser?.id;
+      var query = client
+          .from('profiles')
+          .select('id')
+          .eq('username', username.toLowerCase());
 
-    if (userId != null) {
-      query = query.neq('id', userId);
-    }
+      if (userId != null) {
+        query = query.neq('id', userId);
+      }
 
-    final response = await query;
-    return safeListCast(response).isEmpty;
+      final response = await query;
+      return safeListCast(response).isEmpty;
+    });
   }
 
   @override
   Future<String> uploadAvatar(String filePath) async {
-    final userId = currentUserId;
-    final fileExt = filePath.split('.').last;
-    final fileName = '$userId/avatar.$fileExt';
+    return safeCall(() async {
+      final userId = currentUserId;
+      final fileExt = filePath.split('.').last;
+      final fileName = '$userId/avatar.$fileExt';
 
-    await client.storage
-        .from(SupabaseConfig.avatarsBucket)
-        .upload(
-          fileName,
-          File(filePath),
-          fileOptions: const FileOptions(upsert: true),
-        );
+      await client.storage
+          .from(SupabaseConfig.avatarsBucket)
+          .upload(
+            fileName,
+            File(filePath),
+            fileOptions: const FileOptions(upsert: true),
+          );
 
-    final publicUrl = client.storage
-        .from(SupabaseConfig.avatarsBucket)
-        .getPublicUrl(fileName);
+      final publicUrl = client.storage
+          .from(SupabaseConfig.avatarsBucket)
+          .getPublicUrl(fileName);
 
-    return publicUrl;
+      return publicUrl;
+    });
   }
 }

@@ -839,7 +839,80 @@ class _BumpScreenState extends ConsumerState<BumpScreen>
             ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
           ),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+
+        // Quick notes prompt — capture context in the moment
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 48),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(LucideIcons.pencil, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Quick notes',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  maxLines: 2,
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'What did you talk about?',
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.textMuted.withValues(alpha: 0.6),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  onSubmitted: (notes) {
+                    if (notes.trim().isEmpty) return;
+                    final recv = _exchangeResult?['receiver'] as Map<String, dynamic>? ?? _exchangeResult ?? {};
+                    final recvId = recv['id'] as String?;
+                    if (recvId != null) {
+                      ref.read(prospectsProvider.notifier).updateProspectNotes(recvId, notes.trim());
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Notes saved!'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ).animate().fadeIn(delay: 450.ms, duration: 400.ms),
+
+        const SizedBox(height: 16),
 
         // View Profile button
         Padding(

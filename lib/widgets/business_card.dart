@@ -135,7 +135,7 @@ Widget _cardContainer({
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: gradient,
-        color: color,
+        color: gradient == null ? color : null,
         borderRadius: BorderRadius.circular(16),
         border: border,
         boxShadow: [

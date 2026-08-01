@@ -636,21 +636,35 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: cardGradient,
-        color: cardGradient == null ? cardBg : null,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: borderWidth),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
+      decoration: cardGradient != null
+          ? BoxDecoration(
+              gradient: cardGradient,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor, width: borderWidth),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            )
+          : BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor, width: borderWidth),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
       child: Row(
         children: [
           Container(

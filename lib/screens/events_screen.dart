@@ -17,18 +17,18 @@ import 'package:bump/data/models/prospect_model.dart';
 import 'package:bump/screens/nudge_sheet.dart';
 import 'package:bump/widgets/empty_state.dart';
 
-// ── Design Tokens ───────────────────────────────────────────────────────────
-const _primary = Color(0xFF5341CD);
-const _primaryContainer = Color(0xFF6C5CE7);
-const _secondary = Color(0xFF00677F);
+// ── Design Tokens (mapped to AppColors) ─────────────────────────────────────
+const _primary = AppColors.primary;
+const _primaryContainer = AppColors.accent;
+const _secondary = AppColors.statusNew;
 const _secondaryContainer = Color(0xFF00D2FF);
-const _background = Color(0xFFF8F9FE);
-const _surface = Color(0xFFFFFFFF);
-const _surfaceLow = Color(0xFFF2F3F8);
-const _onSurface = Color(0xFF191C1F);
-const _onSurfaceVariant = Color(0xFF474554);
-const _outline = Color(0xFF787586);
-const _outlineVariant = Color(0xFFC8C4D7);
+const _background = AppColors.background;
+const _surface = AppColors.surface;
+const _surfaceLow = AppColors.surfaceLight;
+const _onSurface = AppColors.textPrimary;
+const _onSurfaceVariant = AppColors.textSecondary;
+const _outline = AppColors.textMuted;
+const _outlineVariant = AppColors.outlineVariant;
 
 // ── Status Colors ───────────────────────────────────────────────────────────
 Color _statusColor(ProspectStatus status) {
@@ -1264,27 +1264,27 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
                   _nameCtrl.text.trim().isNotEmpty ? _handleCreate : null,
               child: Container(
                 height: 56,
-                decoration: BoxDecoration(
-                  gradient: _nameCtrl.text.trim().isNotEmpty
-                      ? const LinearGradient(
+                decoration: _nameCtrl.text.trim().isNotEmpty
+                    ? BoxDecoration(
+                        gradient: const LinearGradient(
                           colors: [_primary, _primaryContainer],
                           begin: Alignment.bottomLeft,
                           end: Alignment.topRight,
-                        )
-                      : null,
-                  color: _nameCtrl.text.trim().isEmpty ? _surfaceLow : null,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: _nameCtrl.text.trim().isNotEmpty
-                      ? [
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
                           BoxShadow(
                             color: _primaryContainer
                                 .withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
-                        ]
-                      : null,
-                ),
+                        ],
+                      )
+                    : BoxDecoration(
+                        color: _surfaceLow,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                 alignment: Alignment.center,
                 child: Text(
                   'Create Event',

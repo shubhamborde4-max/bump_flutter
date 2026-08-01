@@ -13,39 +13,44 @@ class SupabaseTemplateRepository
 
   @override
   Future<List<Template>> getTemplates() async {
-    // Fetch system templates (user_id is null) plus user's own templates
-    final response = await client
-        .from('templates')
-        .select()
-        .or('user_id.is.null,user_id.eq.$currentUserId')
-        .order('created_at', ascending: false);
+    return safeCall(() async {
+      final response = await client
+          .from('templates')
+          .select()
+          .or('user_id.is.null,user_id.eq.$currentUserId')
+          .order('created_at', ascending: false);
 
-    return safeListCast(response)
-        .map((json) => Template.fromJson(json))
-        .toList();
+      return safeListCast(response)
+          .map((json) => Template.fromJson(json))
+          .toList();
+    });
   }
 
   @override
   Future<Template> createTemplate(Template template) async {
-    final data = template.toJson();
-    data['user_id'] = currentUserId;
-    data.remove('id');
+    return safeCall(() async {
+      final data = template.toJson();
+      data['user_id'] = currentUserId;
+      data.remove('id');
 
-    final response = await client
-        .from('templates')
-        .insert(data)
-        .select()
-        .single();
+      final response = await client
+          .from('templates')
+          .insert(data)
+          .select()
+          .single();
 
-    return Template.fromJson(response);
+      return Template.fromJson(response);
+    });
   }
 
   @override
   Future<void> deleteTemplate(String id) async {
-    await client
-        .from('templates')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+    return safeCall(() async {
+      await client
+          .from('templates')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', currentUserId);
+    });
   }
 }

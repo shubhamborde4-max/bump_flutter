@@ -442,6 +442,91 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                         const SizedBox(height: 16),
 
+                        // Quick test login — for development/testing only
+                        OutlinedButton.icon(
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    const testEmail = 'test6357192028@bump.app';
+                                    const testPass = '123456';
+                                    final auth = Supabase.instance.client.auth;
+
+                                    // Try sign in first; if account doesn't exist, sign up
+                                    try {
+                                      await auth.signInWithPassword(
+                                        email: testEmail,
+                                        password: testPass,
+                                      );
+                                    } on AuthException {
+                                      await auth.signUp(
+                                        email: testEmail,
+                                        password: testPass,
+                                        data: {
+                                          'first_name': 'Test',
+                                          'last_name': 'User',
+                                        },
+                                      );
+                                    }
+
+                                    if (!mounted) return;
+                                    await Future.delayed(
+                                        const Duration(milliseconds: 500));
+
+                                    final profileRepo =
+                                        ref.read(profileRepositoryProvider);
+                                    final profile =
+                                        await profileRepo.getMyProfile();
+
+                                    if (!mounted) return;
+                                    if (profile == null ||
+                                        profile.firstName.isEmpty) {
+                                      context.go('/profile-setup');
+                                    } else {
+                                      context.go('/home');
+                                    }
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content:
+                                            Text('Test login failed: $e'),
+                                        backgroundColor: Colors.red.shade600,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
+                                      ),
+                                    );
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
+                          icon: const Icon(Icons.science_outlined, size: 20),
+                          label: Text(
+                            'Quick Test Login (6357192028)',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.success,
+                            side: BorderSide(
+                                color: AppColors.success.withValues(alpha: 0.5)),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
                         // Google OAuth button (coming soon)
                         Opacity(
                           opacity: 0.6,
